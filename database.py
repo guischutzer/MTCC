@@ -1,5 +1,7 @@
 
 
+# todo: transform this class into a Dictionary child class
+
 class DataBase:
 
     def __init__(self, filename):
@@ -53,11 +55,5 @@ class DataBase:
             tou = ''
 
         self.db[name] = Card(name, cost, text, ctype, supertype, subtype, power, tou)
+
         return self.db[name]
-
-
-def initDB(filename):
-
-    f = open(filename, 'r')
-
-def addCard()
