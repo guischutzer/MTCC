@@ -13,9 +13,23 @@ args = parser.parse_args()
 
 class Game:
 
-    def __init__(self):
-        player_1 = Player(1)
-        player_2 = Player(2)
+    def __init__(self, deck1, deck2, dbFilename='default.db'):
+        self.player_1 = Player(1)
+        self.player_2 = Player(2)
+
+        self.db = DataBase(dbFilename)
+        player_1.setLibrary(readDeck(deck1))
+        player_2.setLibrary(readDeck(deck2))
+
+    def readDeck(self, filename):
+
+        library = []
+        f = open(filename, 'r')
+
+        deckList = f.readlines()
+        for item in deckList:
+            
+
 
 class Player:
 

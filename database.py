@@ -1,23 +1,18 @@
-
-
-# todo: transform this class into a Dictionary child class
-
 class DataBase:
 
     def __init__(self, filename):
         self.db = {}
 
-        self.f = open(filename, 'rw')
+        f = open(filename, 'r')
         self.content = []
         line = f.readline()
         while line:
             self.content.append(line.splitlines[0])
             line = f.readline()
 
+        f.close()
 
-    def searchCard(self, cardName):
-        if self.db[cardName]:
-            return self.db[cardName]
+    def readCard(self, cardName):
 
         for i in range(len(self.content)):
             if self.content[i] == cardName:
@@ -32,24 +27,62 @@ class DataBase:
 
                 return self.db[cardName]
 
-        print('Card not found in the database. Adding card...')
+        return None
+
+
+    def getCard(self, cardName):
+        if self.db[cardName]:
+            return self.db[cardName]
+
+        read = readCard(cardName)
+        if read is not None:
+            return read
+
+        print('Card not found in the database. Adding card... (enter \'q\' anytime to quit)')
         return self.addCard(cardName)
 
     def addCard(self, cardName):
+
+        if cardName != '':
+            c = input("Is this name correct: " + cardName + "? (Y/n/q) ")
+            if c == "" or c == "y" or c == "yes":
+                name = cardName
+            elif c == "q":
+                return
+            elif:
+                cardName = ''
+
         if cardName == '':
             name = input("Card name: ")
-        else:
-            name = cardName
+        if name == "q":
+            return
 
         cost = input("Card cost: ")
+        if cost == "q":
+            return
+
         text = input("Card text: ")
+        if text == "q":
+            return
+
         ctype = input("Card type: ")
+        if ctype == "q":
+            return
         supertype = input("Card supertype: ")
+        if supertype == "q":
+            return
         subtype = input("Card subtype: ")
+        if subtype == "q":
+            return
 
         if ctype == 'Creature':
             power = input("Card power: ")
+            if power == "q":
+                return
+
             tou = input("Card toughness: ")
+            if tou == "q":
+                return
         else:
             power = ''
             tou = ''
@@ -57,3 +90,11 @@ class DataBase:
         self.db[name] = Card(name, cost, text, ctype, supertype, subtype, power, tou)
 
         return self.db[name]
+
+    def saveDataBase(self, filename):
+        f = open(filename, 'w')
+
+        for card in self.db:
+            print(self.db[card], f)
+
+        f.close()

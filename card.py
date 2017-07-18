@@ -29,4 +29,15 @@ class Card:
 
         return c
 
-class 
+    def __str__(self):
+        s = self.name + "\n"
+        s += self.cost + "\n"
+        s += self.text + "\n"
+        s += self.ctype + "\n"
+        s += self.supertype + "\n"
+        s += self.subtype + "\n"
+        s += self.power + "\n"
+        s += self.tou + "\n"
+        return s
+
+class
