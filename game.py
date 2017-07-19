@@ -3,72 +3,23 @@
 import argparse
 import random
 
-parser = argparse.ArgumentParser(description='Magic: the Gathering utilitary')
-parser.add_argument('deck1',
-                    help='Deck file (player 1)')
-parser.add_argument('deck2',
-                    help='Deck file (player 2)')
-
-args = parser.parse_args()
-db = DataBase()
-
-class Game:
-
-    def __init__(self, deck1, deck2):
-        self.player_1 = Player(1)
-        self.player_2 = Player(2)
-
-        player_1.setLibrary(readDeck(deck1))
-        player_2.setLibrary(readDeck(deck2))
-
-        self.pqueue = []
-        activePlayer = randrange(1, 3)
-        setActivePlayer(activePlayer)
-
-        keep = [False, False]
-        while not all(keep):
-            keep = [pqueue[0].mulligan(), pqueue[1].mulligan()]
-
-
-
-    def readDeck(self, filename):
-
-        library = []
-        f = open(filename, 'r')
-
-        deckList = f.readlines()
-        for entry in deckList:
-            entry = entry.split(" ")
-            number = int(entry[0])
-            name = " ".join(entry[1:])
-            for i in range(number):
-                library.append(db.addCard(name))
-
-        return library
-
-    def changeActivePlayer(self):
-        self.player_1.setActive(!player_1.isActive())
-        self.player_2.setActive(!player_2.isActive())
-        self.pqueue = pqueue.reverse()
-
-    def setActivePlayer(self, activePlayer):
-        self.player_1.setActive(activePlayer == 1)
-        self.player_2.setActive(activePlayer == 2)
-
-        if activePlayer == 1:
-            pqueue.append(self.player_1)
-            pqueue.append(self.player_2)
-        else:
-            pqueue.append(self.player_2)
-            pqueue.append(self.player_1)
+# parser = argparse.ArgumentParser(description='Magic: the Gathering utilitary')
+# parser.add_argument('deck1',
+#                     help='Deck file (player 1)')
+# parser.add_argument('deck2',
+#                     help='Deck file (player 2)')
+#
+# args = parser.parse_args()
+# db = DataBase()
 
 class Player:
 
-    def __init__(self, id):
+    def __init__(self, number):
         self.life = 20
         self.hand = []
         self.library = []
         self.lose = False
+        self.number = number
 
     def setLibrary(self, library):
         self.library = library
@@ -97,9 +48,86 @@ class Player:
     def isActive(self):
         return self.active
 
-    def start(self):
-        shuffle()
-        draw(7)
-        self.keep = False
+    def showHand(self):
+        for card in self.hand:
+            print(card)
+        return
+
+    def scry():
+        card = self.library.pop()
+
 
     def mulligan(self):
+
+        n = len(self.hand)
+        if n == 0:
+            return True
+
+        self.showHand()
+        c = input("Keep hand? (Y/n)")
+        if c == "y" or c == "Y" or c == "":
+            print("\n")
+            return True
+
+        while self.hand != []:
+            self.library.append(self.hand.pop())
+
+        self.shuffle()
+        self.draw(n - 1)
+
+        return False
+
+class Game:
+
+    def __init__(self, deck1, deck2):
+        self.player_1 = Player(1)
+        self.player_2 = Player(2)
+
+        self.player_1.setLibrary(self.readDeck(deck1))
+        self.player_2.setLibrary(self.readDeck(deck2))
+
+        self.pqueue = []
+        activePlayer = random.randrange(1, 3)
+        self.setActivePlayer(activePlayer)
+
+        self.player_1.shuffle()
+        self.player_2.shuffle()
+        self.player_1.draw(7)
+        self.player_2.draw(7)
+
+        keep = [False, False]
+        while not all(keep):
+            keep = [self.pqueue[0].mulligan(), self.pqueue[1].mulligan()]
+
+    def readDeck(self, filename):
+
+        library = []
+        f = open(filename, 'r')
+
+        deckList = f.readlines()
+        for entry in deckList:
+            entry = entry.split(" ")
+            number = int(entry[0])
+            name = " ".join(entry[1:])
+            for i in range(number):
+                library.append(name)
+
+        return library
+
+    def changeActivePlayer(self):
+        self.player_1.setActive(not player_1.isActive())
+        self.player_2.setActive(not player_2.isActive())
+        self.pqueue = pqueue.reverse()
+
+    def setActivePlayer(self, activePlayer):
+        self.player_1.setActive(activePlayer == 1)
+        self.player_2.setActive(activePlayer == 2)
+
+        if activePlayer == 1:
+            self.pqueue.append(self.player_1)
+            self.pqueue.append(self.player_2)
+        else:
+            self.pqueue.append(self.player_2)
+            self.pqueue.append(self.player_1)
+
+jogo = Game("deck1.txt", "deck2.txt")
