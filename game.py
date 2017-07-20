@@ -55,7 +55,13 @@ class Player:
 
     def scry():
         card = self.library.pop()
-
+        s = ""
+        while s != "1" or s != "2":
+            s = input("The top card is " + card.name ". Do you want to (1) keep it in top or (2) put it at the bottom of the library?")
+            if s == "1":
+                self.library.append(card)
+            elif s == "2":
+                self.library.insert(0, card)
 
     def mulligan(self):
 
@@ -67,6 +73,8 @@ class Player:
         c = input("Keep hand? (Y/n)")
         if c == "y" or c == "Y" or c == "":
             print("\n")
+            if n < 7:
+                self.scry()
             return True
 
         while self.hand != []:
@@ -99,6 +107,44 @@ class Game:
         while not all(keep):
             keep = [self.pqueue[0].mulligan(), self.pqueue[1].mulligan()]
 
+        gameState = True
+        while gameState:
+            endGame = self.turnRoutine(activePlayer, 1)
+
+    def turnRoutine(self, activePlayer, number):
+
+        ## Beggining Phase
+        # Untap
+
+        # Upkeep
+
+        # Draw
+
+        ## Precombat Main Phase
+
+        ## Combat Phase
+        # Beggining of Combat
+
+        # Declare Attackers
+
+        # Declare Blockers
+
+        # Combat Damage
+        # - First & Double Strike Damage
+
+        # - Combat Damage
+
+        # End of Combat
+
+        ## Postcombat Main Phase
+
+        ## End Phase
+        # End
+
+        # Cleanup
+
+        return True
+
     def readDeck(self, filename):
 
         library = []
@@ -129,5 +175,7 @@ class Game:
         else:
             self.pqueue.append(self.player_2)
             self.pqueue.append(self.player_1)
+
+
 
 jogo = Game("deck1.txt", "deck2.txt")
