@@ -66,18 +66,17 @@ class Game:
         # Beggining of Combat (not present in version alpha)
 
         # Declare Attackers
-        attackers = []
+        combatPairings = {}
         for permanent in activePlayer.battlefield:
             if permanent.canAttack():
                 c = input("Declare " + permanent.card.name + " as an attacker? (y/N) ")
                 if confirm(c):
                     permanent.attack()
-                    attackers.append(permanent)
+                    combatPairings.[permanent] = []
 
 
         # Declare Blockers
-        combatPairings = {}
-        for attacker in attacking:
+        for attacker in combatPairings:
             c = input("Block " + attacker.card.name + "? (y/N) ")
             if confirm(c):
                 for permanent in opponent.battlefied:
@@ -85,6 +84,7 @@ class Game:
                         c = input("With " + b.card.name + "? (y/N)":
                         if confirm(c):
                             permanent.block(attacker)
+                            combatPairings[attacker].append(permanent)
 
         # Combat Damage
         # - First & Double Strike Damage
