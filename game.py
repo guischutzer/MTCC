@@ -80,7 +80,7 @@ class Game:
             if confirm(c):
                 for permanent in opponent.battlefied:
                     if permanent.canBlock(attacker):
-                        c = input("With " + b.card.name + "? (y/N)":
+                        c = input("With " + b.card.name + "? (y/N) ")
                         if confirm(c):
                             permanent.block(attacker)
                             combatPairings[attacker].append(permanent)
