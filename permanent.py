@@ -62,3 +62,6 @@ class Permanent:
 
     def takeDamage(self, damage):
         self.tou = self.tou - damage
+
+    def stats(self):
+        return self.card.name + " " + str(self.power) "/" + str(self.tou)

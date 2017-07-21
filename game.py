@@ -60,12 +60,11 @@ class Game:
         if tNumber > 1:
             activePlayer.draw()
 
-        ## Precombat Main Phase
+        ## Precombat Main Phase TODO: Show legal actions
 
         ## Combat Phase
-        # Beggining of Combat (not present in version alpha)
 
-        # Declare Attackers
+        # Declare Attackers - Active Player
         combatPairings = {}
         for permanent in activePlayer.battlefield:
             if permanent.canAttack():
@@ -75,7 +74,7 @@ class Game:
                     combatPairings.[permanent] = []
 
 
-        # Declare Blockers
+        # Declare Blockers - Not Active Player
         for attacker in combatPairings:
             c = input("Block " + attacker.card.name + "? (y/N) ")
             if confirm(c):
@@ -86,8 +85,32 @@ class Game:
                             permanent.block(attacker)
                             combatPairings[attacker].append(permanent)
 
+        ## Choosing Block Order - Not Active Player
+        for attacker in combatPairings:
+            if len(combatPairings[attacker]) > 1:
+                print("Blocking " + attacker.stats() + ": ")
+                i = 1
+                auxList = []
+                for blocker in combatPairings[attacker]:
+                    print(str(i) + ") " + blocker.stats())
+                    auxList.append("")
+                    i + 1
+                order = input("Desired order (numbers with commas): ")
+                order.split(" ")
+                i = 0
+                for number in order:
+                    auxList[n] = combatPairings[attacker][int(number) - 1]
+                    i += 1
+                combatPairings[attacker] = auxList
+
+        ## TODO: Damage assignment - Active Player
+
         # Combat Damage
         # - First & Double Strike Damage
+        for attacker in combatPairings:
+            if "First Strike" in attacker.abilities or "Double Strike" in attacker.abilities:
+
+
 
         # - Combat Damage
 
