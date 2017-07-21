@@ -108,15 +108,67 @@ class Game:
         # Combat Damage
         # - First & Double Strike Damage
         for attacker in combatPairings:
-            if "First Strike" in attacker.abilities or "Double Strike" in attacker.abilities:
 
+            if attacker.hasFirstStrike() or attacker.hasDoubleStrike():
+                remainingDamage = attacker.power
 
+                for blocker in combatPairings[attacker]:
+                    totalToughness = blocker.tou
+                    tookDamage = blocker.takeDamage(remainingDamage)
+                    if attacker.hasDeathtouch and tookDamage:
+                        blocker.destroy()
+                    remainingDamage -= blocker.totalToughness
+
+                if attacker.hasTrample():
+                    opponent.loseLife(remainingDamage)
+
+                elif combatPairings[attacker] == []:
+                    opponent.loseLife(attacker.power)
+
+            for blocker in combatPairings[attacker]:
+                if blocker.hasFirstStrike() or blocker.hasDoubleStrike():
+                    tookDamage = attacker.takeDamage(blocker.power)
+                    if blocker.hasDeathtouch and tookDamage:
+                        attacker.destroy()
+
+        # TODO: resolve damage "simultaneously" (destroy creatures, etc)
 
         # - Combat Damage
+
+        for attacker in combatPairings:
+
+            if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
+                remainingDamage = attacker.power
+
+                for blocker in combatPairings[attacker]:
+                    totalToughness = blocker.tou
+                    tookDamage = blocker.takeDamage(remainingDamage)
+                    if attacker.hasDeathtouch and tookDamage:
+                        blocker.destroy()
+                    remainingDamage -= blocker.totalToughness
+
+                if attacker.hasTrample():
+                    opponent.loseLife(remainingDamage)
+
+                elif combatPairings[attacker] == []:
+                    opponent.loseLife(attacker.power)
+
+            for blocker in combatPairings[attacker]:
+                if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
+                    tookDamage = attacker.takeDamage(blocker.power)
+                    if blocker.hasDeathtouch and tookDamage:
+                        attacker.destroy()
+
+        # TODO: resolve damage "simultaneously" (destroy creatures, etc)
 
         # End of Combat
 
         ## Postcombat Main Phase
+
+        for attacker in combatPairings:
+            attacker.attacking = False
+            for blocker in combatPairings[attacker]:
+                blocker.blocking = False
 
         ## End Phase
         # End

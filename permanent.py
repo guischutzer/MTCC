@@ -37,6 +37,10 @@ class Permanent:
             self.tapped = True
         self.attacking = True
 
+    def block(self, attacker):
+        attacker.isBlocked()
+        self.blocking = True
+
     def canAttack(self):
         return self.card.ctype == "Creature" and not self.tapped and not self.sick
 
@@ -56,12 +60,23 @@ class Permanent:
 
         return True
 
-    def block(self, attacker):
-        attacker.isBlocked()
-        self.blocking = True
-
     def takeDamage(self, damage):
-        self.tou = self.tou - damage
+        if damage >= 1:
+            self.tou = self.tou - damage
+            return True
+        return False
+
+    def hasFirstStrike(self):
+        return "First Strike" in self.abilities
+
+    def hasDoubleStrike(self):
+        return "Double Strike" in self.abilities
+
+    def hasDeathtouch(self):
+        return "Deathtouch" in self.abilities
+
+    def hasTrample(self):
+        return "Trample" in self.abilities
 
     def stats(self):
         return self.card.name + " " + str(self.power) "/" + str(self.tou)
