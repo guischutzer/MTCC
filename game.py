@@ -12,78 +12,8 @@ import random
 # args = parser.parse_args()
 # db = DataBase()
 
-class Player:
-
-    def __init__(self, number):
-        self.life = 20
-        self.hand = []
-        self.library = []
-        self.lose = False
-        self.number = number
-
-    def setLibrary(self, library):
-        self.library = library
-
-    def draw(self, n=1):
-        if (len(self.library) == 0):
-            self.lose = True
-            return
-
-        for i in range(n):
-            card = self.library.pop()
-            self.hand.append(card)
-
-    def shuffle(self):
-        random.shuffle(self.library)
-
-    def gainLife(self, x):
-        self.life += x
-
-    def loseLife(self, x):
-        self.gainLife(-x)
-
-    def setActive(self, b):
-        self.active = b
-
-    def isActive(self):
-        return self.active
-
-    def showHand(self):
-        for card in self.hand:
-            print(card)
-        return
-
-    def scry():
-        card = self.library.pop()
-        s = ""
-        while s != "1" or s != "2":
-            s = input("The top card is " + card.name ". Do you want to (1) keep it in top or (2) put it at the bottom of the library?")
-            if s == "1":
-                self.library.append(card)
-            elif s == "2":
-                self.library.insert(0, card)
-
-    def mulligan(self):
-
-        n = len(self.hand)
-        if n == 0:
-            return True
-
-        self.showHand()
-        c = input("Keep hand? (Y/n)")
-        if c == "y" or c == "Y" or c == "":
-            print("\n")
-            if n < 7:
-                self.scry()
-            return True
-
-        while self.hand != []:
-            self.library.append(self.hand.pop())
-
-        self.shuffle()
-        self.draw(n - 1)
-
-        return False
+def confirm(s):
+    return s == "y" or s == "Y" or s == "Yes"
 
 class Game:
 
@@ -95,8 +25,8 @@ class Game:
         self.player_2.setLibrary(self.readDeck(deck2))
 
         self.pqueue = []
-        activePlayer = random.randrange(1, 3)
-        self.setActivePlayer(activePlayer)
+        actPlayerID = random.randrange(1, 3)
+        self.setActivePlayer(actPlayerID)
 
         self.player_1.shuffle()
         self.player_2.shuffle()
@@ -107,27 +37,54 @@ class Game:
         while not all(keep):
             keep = [self.pqueue[0].mulligan(), self.pqueue[1].mulligan()]
 
-        gameState = True
+        n = 0
+        gameState = True # flag for ending the game (name may change)
         while gameState:
-            endGame = self.turnRoutine(activePlayer, 1)
+            n += 1
+            gameState = self.turnRoutine(n)
+            self.changeActivePlayer()
 
-    def turnRoutine(self, activePlayer, number):
+    def turnRoutine(self, tNumber):
+
+        activePlayer = self.pqueue[0]
+        opponent = self.pqueue[1]
 
         ## Beggining Phase
-        # Untap
+        # Untap - untap permanents of active player
+        for permanent in activePlayer.battlefield:
+            permanent.untap()
 
-        # Upkeep
+        # Upkeep (not present in version alpha)
 
         # Draw
+        if tNumber > 1:
+            activePlayer.draw()
 
         ## Precombat Main Phase
 
         ## Combat Phase
-        # Beggining of Combat
+        # Beggining of Combat (not present in version alpha)
 
         # Declare Attackers
+        attackers = []
+        for permanent in activePlayer.battlefield:
+            if permanent.canAttack():
+                c = input("Declare " + permanent.card.name + " as an attacker? (y/N) ")
+                if confirm(c):
+                    permanent.attack()
+                    attackers.append(permanent)
+
 
         # Declare Blockers
+        combatPairings = {}
+        for attacker in attacking:
+            c = input("Block " + attacker.card.name + "? (y/N) ")
+            if confirm(c):
+                for permanent in opponent.battlefied:
+                    if permanent.canBlock(attacker):
+                        c = input("With " + b.card.name + "? (y/N)":
+                        if confirm(c):
+                            permanent.block(attacker)
 
         # Combat Damage
         # - First & Double Strike Damage
@@ -165,11 +122,11 @@ class Game:
         self.player_2.setActive(not player_2.isActive())
         self.pqueue = pqueue.reverse()
 
-    def setActivePlayer(self, activePlayer):
-        self.player_1.setActive(activePlayer == 1)
-        self.player_2.setActive(activePlayer == 2)
+    def setActivePlayer(self, ID):
+        self.player_1.setActive(ID == 1)
+        self.player_2.setActive(ID == 2)
 
-        if activePlayer == 1:
+        if ID == 1:
             self.pqueue.append(self.player_1)
             self.pqueue.append(self.player_2)
         else:
