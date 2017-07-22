@@ -9,6 +9,7 @@ class Player:
         self.lose = False
         self.number = number
         self.battlefield = []
+        self.active = False
 
     def setLibrary(self, library):
         self.library = library
@@ -31,15 +32,23 @@ class Player:
     def loseLife(self, x):
         self.gainLife(-x)
 
+    def takeDamage(self, x):
+        self.loseLife(x)
+
     def setActive(self, b):
         self.active = b
 
     def isActive(self):
         return self.active
 
+    def cardsInHand(self):
+        return len(self.hand)
+
     def showHand(self):
+        i = 1
         for card in self.hand:
-            print(card)
+            print(i, ") ", card)
+            i += 1
         return
 
     def scry():

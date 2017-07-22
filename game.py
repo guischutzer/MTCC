@@ -1,5 +1,3 @@
-
-
 import argparse
 import random
 
@@ -28,6 +26,8 @@ class Game:
         actPlayerID = random.randrange(1, 3)
         self.setActivePlayer(actPlayerID)
 
+        self.battlefield = []
+
         self.player_1.shuffle()
         self.player_2.shuffle()
         self.player_1.draw(7)
@@ -48,19 +48,33 @@ class Game:
 
         activePlayer = self.pqueue[0]
         opponent = self.pqueue[1]
+        landDrop = False
 
         ## Beggining Phase
         # Untap - untap permanents of active player
         for permanent in activePlayer.battlefield:
             permanent.untap()
+            permanent.removeSickness()
 
         # Upkeep (not present in version alpha)
+        self.checkSBA()
 
         # Draw
         if tNumber > 1:
             activePlayer.draw()
+        self.checkSBA()
 
         ## Precombat Main Phase TODO: Show legal actions
+        activePlayer.showHand()
+        c = input("Choose a card from your hand to play (0 will pass priority):")
+        ## TODO: play the card
+        self.checkSBA()
+
+        while c != 0:
+            activePlayer.showHand()
+            c = input("Choose a card from your hand to play (0 will pass priority):")
+            ## TODO: play the card
+            self.checkSBA()
 
         ## Combat Phase
 
@@ -103,35 +117,34 @@ class Game:
                     i += 1
                 combatPairings[attacker] = auxList
 
-        ## TODO: Damage assignment - Active Player
-
         # Combat Damage
         # - First & Double Strike Damage
         for attacker in combatPairings:
 
             if attacker.hasFirstStrike() or attacker.hasDoubleStrike():
-                remainingDamage = attacker.power
+                remainingDamage = attacker.curPower
 
                 for blocker in combatPairings[attacker]:
-                    totalToughness = blocker.tou
-                    tookDamage = blocker.takeDamage(remainingDamage)
-                    if attacker.hasDeathtouch and tookDamage:
-                        blocker.destroy()
-                    remainingDamage -= blocker.totalToughness
+                    neededDamage = blocker.curTou - blocker.damage
+                    if attacker.hasDeathtouch():
+                        neededDamage = 1
+                    if remainingDamage > 0:
+                        if remainingDamage > neededDamage:
+                            attacker.dealDamage(blocker, neededDamage)
+                            remainingDamage -= neededDamage
 
-                if attacker.hasTrample():
-                    opponent.loseLife(remainingDamage)
+                if combatPairings[attacker] != [] and not attacker.hasTrample():
+                    attacker.dealDamage(blocker, remainingDamage)
 
-                elif combatPairings[attacker] == []:
-                    opponent.loseLife(attacker.power)
+                else:
+                    attacker.dealDamage(opponent, remainingDamage)
+
 
             for blocker in combatPairings[attacker]:
                 if blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    tookDamage = attacker.takeDamage(blocker.power)
-                    if blocker.hasDeathtouch and tookDamage:
-                        attacker.destroy()
+                    blocker.dealDamage(attacker, curPower)
 
-        # TODO: resolve damage "simultaneously" (destroy creatures, etc)
+        self.checkSBA()
 
         # - Combat Damage
 
@@ -141,39 +154,55 @@ class Game:
                 remainingDamage = attacker.power
 
                 for blocker in combatPairings[attacker]:
-                    totalToughness = blocker.tou
-                    tookDamage = blocker.takeDamage(remainingDamage)
-                    if attacker.hasDeathtouch and tookDamage:
-                        blocker.destroy()
-                    remainingDamage -= blocker.totalToughness
+                    neededDamage = blocker.curTou - blocker.damage
+                    if attacker.hasDeathtouch():
+                        neededDamage = 1
+                    if remainingDamage > 0:
+                        if remainingDamage > neededDamage:
+                            attacker.dealDamage(blocker, neededDamage)
+                            remainingDamage -= neededDamage
 
-                if attacker.hasTrample():
-                    opponent.loseLife(remainingDamage)
+                if combatPairings[attacker] != [] and not attacker.hasTrample():
+                    attacker.dealDamage(blocker, remainingDamage)
 
-                elif combatPairings[attacker] == []:
-                    opponent.loseLife(attacker.power)
+                else:
+                    attacker.dealDamage(opponent, remainingDamage)
 
             for blocker in combatPairings[attacker]:
                 if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    tookDamage = attacker.takeDamage(blocker.power)
-                    if blocker.hasDeathtouch and tookDamage:
-                        attacker.destroy()
+                    blocker.dealDamage(attacker, curPower)
 
-        # TODO: resolve damage "simultaneously" (destroy creatures, etc)
+        self.checkSBA()
 
         # End of Combat
-
-        ## Postcombat Main Phase
-
         for attacker in combatPairings:
             attacker.attacking = False
             for blocker in combatPairings[attacker]:
                 blocker.blocking = False
 
+        ## Postcombat Main Phase
+        activePlayer.showHand()
+        c = input("Choose a card from your hand to play (0 will pass priority):")
+        ## TODO: play the card
+        self.checkSBA()
+
+        while c != 0:
+            activePlayer.showHand()
+            c = input("Choose a card from your hand to play (0 will pass priority):")
+            ## TODO: play the card
+            self.checkSBA()
+
         ## End Phase
         # End
 
         # Cleanup
+        for permanent in activePlayer.battlefied:
+            permanent.removeDamage()
+            permanent.resetPT()
+            while activePlayer.cardsInHand > 7:
+                activePlayer.showHand()
+                c = input("Choose a card from your hand to discard:")
+                ## TODO: discard the chosen card
 
         return True
 
