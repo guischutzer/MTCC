@@ -14,6 +14,12 @@ class Player:
     def setLibrary(self, library):
         self.library = library
 
+    def untapStep(self):
+        self.untappedLands = 0
+        for permanent in self.battlefield:
+            if permanent.ctype == "Land" and permanent.tapped == False:
+                self.untappedLands += 1
+
     def draw(self, n=1):
         if (len(self.library) == 0):
             self.lose = True
@@ -47,9 +53,39 @@ class Player:
     def showHand(self):
         i = 1
         for card in self.hand:
-            print(i, ") ", card)
+            asterisk = ''
+            if self.canPlay(card):
+                asterisk = '*'
+            print(i, asterisk, ") ", card)
             i += 1
         return
+
+    def canPlay(self, card, landDrop):
+
+        if not card.validTargets():
+            return False
+
+        if card.ctype == "Land":
+            if landDrop == True:
+                return False
+            else
+                return True
+
+        if self.cost <= self.untappedLands:
+            return True
+
+        return False
+
+    def play(self, card):
+        mana = 0
+        while mana < card.cost:
+            for permanent in self.battlefield:
+                if permanent.ctype == "Land":
+                    permanent.tap()
+                    self.untappedLands -= 1
+                    mana += 1
+
+
 
     def scry():
         card = self.library.pop()

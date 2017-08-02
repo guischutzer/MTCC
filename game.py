@@ -66,8 +66,22 @@ class Game:
 
         ## Precombat Main Phase TODO: Show legal actions
         activePlayer.showHand()
-        c = input("Choose a card from your hand to play (0 will pass priority):")
-        ## TODO: play the card
+        c = ''
+        while c != '0':
+            c = input("Choose a card from your hand to play (0 will pass priority):")
+            ## TODO: play the card
+            if c != '0' and int(c) <= len(activePlayer.hand):
+                card = player.hand[int(c)]
+                if player.canPlay(card, landDrop):
+                    player.play(card)
+                else:
+                    if card.ctype != "Land":
+                        print("Not enough untapped lands.")
+                    else:
+                        print("Already played a land this turn.")
+                    c = ''
+
+
         self.checkSBA()
 
         while c != 0:
