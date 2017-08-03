@@ -8,17 +8,21 @@ class Player:
         self.library = []
         self.lose = False
         self.number = number
-        self.battlefield = []
+        self.creatures = []
+        self.lands = []
         self.active = False
+        self.graveyard = []
 
     def setLibrary(self, library):
         self.library = library
 
     def untapStep(self):
         self.untappedLands = 0
-        for permanent in self.battlefield:
-            if permanent.ctype == "Land" and permanent.tapped == False:
-                self.untappedLands += 1
+        for land in self.lands:
+            land.untap()
+            untappedLands += 1
+        for creature in self.creatures:
+            creature.untap()
 
     def draw(self, n=1):
         if (len(self.library) == 0):
@@ -31,6 +35,9 @@ class Player:
 
     def shuffle(self):
         random.shuffle(self.library)
+
+    def isPlayer(self):
+        return True
 
     def gainLife(self, x):
         self.life += x
@@ -53,39 +60,9 @@ class Player:
     def showHand(self):
         i = 1
         for card in self.hand:
-            asterisk = ''
-            if self.canPlay(card):
-                asterisk = '*'
             print(i, asterisk, ") ", card)
             i += 1
         return
-
-    def canPlay(self, card, landDrop):
-
-        if not card.validTargets():
-            return False
-
-        if card.ctype == "Land":
-            if landDrop == True:
-                return False
-            else
-                return True
-
-        if self.cost <= self.untappedLands:
-            return True
-
-        return False
-
-    def play(self, card):
-        mana = 0
-        while mana < card.cost:
-            for permanent in self.battlefield:
-                if permanent.ctype == "Land":
-                    permanent.tap()
-                    self.untappedLands -= 1
-                    mana += 1
-
-
 
     def scry():
         card = self.library.pop()

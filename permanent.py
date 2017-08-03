@@ -15,8 +15,14 @@ class Permanent:
         self.tapped = False
         self.sick = False
 
-        if "ETB" in self.abilities:
-            self.abilities["ETB"]()
+    def isPlayer(self):
+        return False
+
+    def isTapped(self):
+        return self.tapped
+
+    def getController(self):
+        return self.controller
 
     def tap(self):
         self.tapped = True
@@ -47,8 +53,7 @@ class Creature(Permanent):
     def __init__(self, card, player):
         super().__init__()
         self.dealtLethal = False
-        if "Haste" not in self.abilities:
-            self.sick = True
+
         self.power = card.power
         self.tou = card.tou
         self.curPower = self.power
@@ -56,10 +61,14 @@ class Creature(Permanent):
         self.attacking = False
         self.blocking = False
         self.damage = 0
+        self.currentAbilities = self.abilities
+        if "Haste" not in self.currentAbilities:
+            self.sick = True
+
 
     def dealDamage(self, target, amount):
         target.takeDamage(amount)
-        if self.hasLifelink() in self.abilities:
+        if self.hasLifelink() in self.currentAbilities:
             self.controller.gainLife(amount)
         if self.hasDeathtouch() and inspect.isinstance(target, Creature):
                 target.die()
@@ -72,15 +81,16 @@ class Creature(Permanent):
     def die(self):
         self.dealtLethal = True
 
-    def resetPT(self):
+    def resetPTA(self):
         self.curPower = self.power
         self.curTou = self.tou
+        self.currentAbilities = self.abilities
 
     def removeDamage(self):
         self.damage = 0
 
     def attack(self):
-        if "Vigilance" not in self.abilities:
+        if "Vigilance" not in self.currentAbilities:
             self.tapped = True
         self.attacking = True
 
@@ -96,8 +106,8 @@ class Creature(Permanent):
         if not self.tapped or self.blocking or self.controller.isActive:
             return False
 
-        if "Flying" in attacker.abilities:
-            if "Flying" in self.abilities or "Reach" in self.abilities:
+        if "Flying" in attacker.currentAbilities:
+            if "Flying" in self.currentAbilities or "Reach" in self.currentAbilities:
                 return True
             else:
                 return False
@@ -105,19 +115,22 @@ class Creature(Permanent):
         return True
 
     def hasFirstStrike(self):
-        return "First Strike" in self.abilities
+        return "First Strike" in self.currentAbilities
 
     def hasDoubleStrike(self):
-        return "Double Strike" in self.abilities
+        return "Double Strike" in self.currentAbilities
 
     def hasLifelink(self):
-        return "Lifelink" in self.abilities
+        return "Lifelink" in self.currentAbilities
 
     def hasDeathtouch(self):
-        return "Deathtouch" in self.abilities
+        return "Deathtouch" in self.currentAbilities
 
     def hasTrample(self):
-        return "Trample" in self.abilities
+        return "Trample" in self.currentAbilities
+
+    def hasHexproof(self):
+        return "Hexproof" in self.currentAbilities
 
     def stats(self):
         return self.card.name + " " + str(self.curPower) "/" + str(self.curTou) + "(" + str(self.damage) + ")"

@@ -1,5 +1,6 @@
 import argparse
 import random
+import copy as c
 
 # parser = argparse.ArgumentParser(description='Magic: the Gathering utilitary')
 # parser.add_argument('deck1',
@@ -44,6 +45,127 @@ class Game:
             gameState = self.turnRoutine(n)
             self.changeActivePlayer()
 
+    def canTarget(self, player, targets):
+
+        opponent = self.opponentOf(player)
+        ownCreatures = c.copy(player.creatures)
+
+        opponentCreatures = c.copy(opponent.creatures)
+        for creature in opponentCreatures:
+            if creature.hasHexproof():
+                opponentCreatures.remove(creature)
+
+        for target in targets:
+            foundTarget = False
+            if "Player" not in target and "Opponent" not in target:
+                for targetType in target:
+                    if foundTarget:
+                        break
+                    if targetType == "Creature":
+                        if len(ownCreatures) > 0:
+                            ownCreatures.pop()
+                            foundTarget = True
+                        elif len(opponentCreatures) > 0:
+                            opponentCreatures.pop()
+                            foundTarget = True
+                    elif targetType == "OwnCreature":
+                        if len(ownCreatures) > 0:
+                            ownCreatures.pop()
+                            foundTarget = True
+                    elif targetType == "OpponentCreature":
+                        if len(opponentCreatures) > 0:
+                            opponentCreatures.pop()
+                            foundTarget = True
+                if not foundTarget:
+                    return False
+
+        return True
+
+    def chooseTargets(self, player, targets):
+        chosenTargets = []
+
+        opponent = self.opponentOf(player)
+        ownCreatures = c.copy(player.creatures)
+
+        opponentCreatures = c.copy(opponent.creatures)
+        for creature in opponentCreatures:
+            if creature.hasHexproof():
+                opponentCreatures.remove(creature)
+
+        targetNumber = 1
+        for targetType in targets:
+            print("Possible targets for the target number" + targetNumber + ":")
+            optionNumber = 1
+            curList = []
+            if "OwnCreature" in targetType:
+                for creature in ownCreatures:
+                    curList.append[creature]
+                    print(optionNumber + ") " + creature.stats)
+                    optionNumber += 1
+            if "OpponentCreature" in targetType:
+                for creature in opponentCreatures:
+                    curList.append[creature]
+                    print(optionNumber + ") " + creature.stats)
+                    optionNumber += 1
+            if "Player" in targetType:
+                curList.append[player]
+                print(optionNumber + ") You")
+                optionNumber += 1
+                curList.append[opponent]
+                print(optionNumber + ") Opponent")
+                optionNumber += 1
+            if "Opponent" in targetType:
+                curList.append[opponent]
+                print(optionNumber + ") Opponent")
+                optionNumber += 1
+            c = 0
+            while c < 1 or c > len(curList):
+                c = int(input("Choose a target: "))
+            chosenTarget = curList[c - 1]
+            chosenTargets.append(chosenTarget)
+            if not chosenTarget.isPlayer():
+                if chosenTarget.getController() == player:
+                    ownCreatures.remove(chosenTarget)
+                else:
+                    opponentCreatures.remove(chosenTarget)
+
+        return chosenTargets
+
+
+    def canPlay(self, player, card):
+
+        if card.ctype == "Land":
+            if self.landDrop == True:
+                return False
+            else:
+                return True
+
+        if card.cost <= player.untappedLands:
+            if.card.ctype == "Sorcery":
+                return self.canTarget(player, card.targets)
+            else:
+                return True
+
+    def play(self, player, card):
+        paidMana = 0
+        player.hand.remove(card)
+        if card.ctype == "Land":
+            player.lands.append(Permanent(card, player))
+            player.untappedLands += 1
+        while paidMana < card.cost:
+            for land in player.lands:
+                if not land.isTapped():
+                    land.tap()
+                    player.untappedLands -= 1
+                    paidMana += 1
+        if card.ctype == "Sorcery":
+            card.effect(self.chooseTargets(player, targets))
+            player.graveyard.append(card)
+        elif card.ctype == "Creature":
+            player.creatures.append(Creature(card, player))
+            if self.canTarget(player, card.targets):
+                card.etb(self.chooseTargets(player, targets))
+
     def turnRoutine(self, tNumber):
 
         activePlayer = self.pqueue[0]
@@ -71,8 +193,8 @@ class Game:
             c = input("Choose a card from your hand to play (0 will pass priority):")
             ## TODO: play the card
             if c != '0' and int(c) <= len(activePlayer.hand):
-                card = player.hand[int(c)]
-                if player.canPlay(card, landDrop):
+                card = player.hand[int(c)-1]
+                if self.canPlay(activePlayer, card):
                     player.play(card)
                 else:
                     if card.ctype != "Land":
@@ -80,9 +202,7 @@ class Game:
                     else:
                         print("Already played a land this turn.")
                     c = ''
-
-
-        self.checkSBA()
+            self.checkSBA()
 
         while c != 0:
             activePlayer.showHand()
@@ -212,7 +332,7 @@ class Game:
         # Cleanup
         for permanent in activePlayer.battlefied:
             permanent.removeDamage()
-            permanent.resetPT()
+            permanent.resetPTA()
             while activePlayer.cardsInHand > 7:
                 activePlayer.showHand()
                 c = input("Choose a card from your hand to discard:")
@@ -234,6 +354,12 @@ class Game:
                 library.append(name)
 
         return library
+
+    def opponentOf(self, player):
+        if self.player_1 == player:
+            return self.player_2
+
+        return self.player_1
 
     def changeActivePlayer(self):
         self.player_1.setActive(not player_1.isActive())

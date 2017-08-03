@@ -12,6 +12,7 @@ class Card:
         self.subtype = subtype
         self.power = power
         self.tou = tou
+        self.targets = []
 
     def cmc(self, cost):
         m = re.match("(\d?)(\w*)", cost).groups()
