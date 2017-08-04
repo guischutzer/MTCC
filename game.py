@@ -39,10 +39,10 @@ class Game:
             keep = [self.pqueue[0].mulligan(), self.pqueue[1].mulligan()]
 
         n = 0
-        gameState = True # flag for ending the game (name may change)
-        while gameState:
+        endGame = False # flag for ending the game (name may change)
+        while not endGame:
             n += 1
-            gameState = self.turnRoutine(n)
+            endGame = self.turnRoutine(n)
             self.changeActivePlayer()
 
     def canTarget(self, player, targets):
@@ -136,27 +136,43 @@ class Game:
 
         if card.ctype == "Land":
             if self.landDrop == True:
+                print("Already played a land this turn.")
                 return False
             else:
                 return True
 
         if card.cost <= player.untappedLands:
             if.card.ctype == "Sorcery":
-                return self.canTarget(player, card.targets)
+                if not self.canTarget(player, card.targets):
+                    print("No valid targets.")
+                    return False
+                return True
             else:
                 return True
+
+        print("Not enough untapped lands.")
+        return False
+
+    def checkSBA(self):
+        for player in self.pqueue:
+            if player.lose:
+                print("Player " + player.number + " has lost the game.")
+                self.pqueue.remove(player)
+                if len(self.pqueue) == 1:
+                    print("Player " + self.pqueue[0].number + " has won the game!")
+                    return True
+
+        return False
 
     def play(self, player, card):
         paidMana = 0
         player.hand.remove(card)
         if card.ctype == "Land":
-            player.lands.append(Permanent(card, player))
-            player.untappedLands += 1
+            player.lands.append(Land(card, player))
         while paidMana < card.cost:
             for land in player.lands:
                 if not land.isTapped():
                     land.tap()
-                    player.untappedLands -= 1
                     paidMana += 1
         if card.ctype == "Sorcery":
             card.effect(self.chooseTargets(player, targets))
@@ -179,12 +195,14 @@ class Game:
             permanent.removeSickness()
 
         # Upkeep (not present in version alpha)
-        self.checkSBA()
+        if self.checkSBA():
+            return True
 
         # Draw
         if tNumber > 1:
             activePlayer.draw()
-        self.checkSBA()
+        if self.checkSBA():
+            return True
 
         ## Precombat Main Phase TODO: Show legal actions
         activePlayer.showHand()
@@ -197,41 +215,32 @@ class Game:
                 if self.canPlay(activePlayer, card):
                     player.play(card)
                 else:
-                    if card.ctype != "Land":
-                        print("Not enough untapped lands.")
-                    else:
-                        print("Already played a land this turn.")
                     c = ''
-            self.checkSBA()
-
-        while c != 0:
-            activePlayer.showHand()
-            c = input("Choose a card from your hand to play (0 will pass priority):")
-            ## TODO: play the card
-            self.checkSBA()
+            if self.checkSBA():
+                return True
 
         ## Combat Phase
 
         # Declare Attackers - Active Player
         combatPairings = {}
-        for permanent in activePlayer.battlefield:
-            if permanent.canAttack():
-                c = input("Declare " + permanent.card.name + " as an attacker? (y/N) ")
+        for creature in activePlayer.creatures:
+            if creature.canAttack():
+                c = input("Declare " + creature.card.name + " as an attacker? (y/N) ")
                 if confirm(c):
-                    permanent.attack()
-                    combatPairings.[permanent] = []
+                    creature.attack()
+                    combatPairings.[creature] = []
 
 
         # Declare Blockers - Not Active Player
         for attacker in combatPairings:
             c = input("Block " + attacker.card.name + "? (y/N) ")
             if confirm(c):
-                for permanent in opponent.battlefied:
-                    if permanent.canBlock(attacker):
-                        c = input("With " + b.card.name + "? (y/N) ")
+                for creature in opponent.creatures:
+                    if creature.canBlock(attacker):
+                        c = input("With " + creature.card.name + "? (y/N) ")
                         if confirm(c):
-                            permanent.block(attacker)
-                            combatPairings[attacker].append(permanent)
+                            creature.block(attacker)
+                            combatPairings[attacker].append(creature)
 
         ## Choosing Block Order - Not Active Player
         for attacker in combatPairings:
@@ -278,7 +287,8 @@ class Game:
                 if blocker.hasFirstStrike() or blocker.hasDoubleStrike():
                     blocker.dealDamage(attacker, curPower)
 
-        self.checkSBA()
+        if self.checkSBA():
+            return True
 
         # - Combat Damage
 
@@ -306,7 +316,9 @@ class Game:
                 if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
                     blocker.dealDamage(attacker, curPower)
 
-        self.checkSBA()
+        end = self.checkSBA()
+        if self.checkSBA():
+            return True
 
         # End of Combat
         for attacker in combatPairings:
@@ -316,15 +328,17 @@ class Game:
 
         ## Postcombat Main Phase
         activePlayer.showHand()
-        c = input("Choose a card from your hand to play (0 will pass priority):")
-        ## TODO: play the card
-        self.checkSBA()
-
+        c = ''
         while c != 0:
-            activePlayer.showHand()
-            c = input("Choose a card from your hand to play (0 will pass priority):")
-            ## TODO: play the card
-            self.checkSBA()
+            c = int(input("Choose a card from your hand to play (0 will pass priority):"))
+            if c > 0 and c <= len(activePlayer.hand):
+                card = player.hand[c - 1]
+                if self.canPlay(activePlayer, card):
+                    player.play(card)
+                else:
+                    c = ''
+            if self.checkSBA():
+                return True
 
         ## End Phase
         # End
@@ -335,10 +349,13 @@ class Game:
             permanent.resetPTA()
             while activePlayer.cardsInHand > 7:
                 activePlayer.showHand()
-                c = input("Choose a card from your hand to discard:")
-                ## TODO: discard the chosen card
+                c = 0
+                while c < 1 or c > len(activePlayer.cardsInHand):
+                    c = int(input("Choose a card from your hand to discard:"))
+                card = activePlayer.hand[c - 1]
+                activePlayer.discard(card)
 
-        return True
+        return False
 
     def readDeck(self, filename):
 

@@ -12,15 +12,16 @@ class Player:
         self.lands = []
         self.active = False
         self.graveyard = []
+        self.untappedLands = 0
 
     def setLibrary(self, library):
         self.library = library
 
     def untapStep(self):
-        self.untappedLands = 0
+
         for land in self.lands:
             land.untap()
-            untappedLands += 1
+
         for creature in self.creatures:
             creature.untap()
 
@@ -32,6 +33,10 @@ class Player:
         for i in range(n):
             card = self.library.pop()
             self.hand.append(card)
+
+    def discard(self, card):
+        self.hand.remove(card)
+        self.graveyard.append(card)
 
     def shuffle(self):
         random.shuffle(self.library)

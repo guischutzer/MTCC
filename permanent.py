@@ -10,6 +10,7 @@ class Permanent:
     def __init__(self, card, player):
         self.card = card
         self.abilities = c.copy(card.abilities)
+        self.ctype = card.ctype
         self.owner = player
         self.controller = player
         self.tapped = False
@@ -47,6 +48,23 @@ class Permanent:
 
     def removeDamage(self):
         return
+
+class Land(Permanent):
+
+    def __init__(self, card, player):
+        super().__init__()
+        self.controller.untappedLands += 1
+
+    def untap(self):
+        if self.tapped:
+            self.controller.untappedLands += 1
+        self.tapped = False
+
+    def tap(self):
+        if not self.tapped:
+            self.controller.untappedLands -= 1
+        self.tapped = True
+
 
 class Creature(Permanent):
 
