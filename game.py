@@ -1,5 +1,7 @@
 import argparse
 import random
+from player import Player
+import utils
 import copy as c
 
 # parser = argparse.ArgumentParser(description='Magic: the Gathering utilitary')
@@ -11,8 +13,6 @@ import copy as c
 # args = parser.parse_args()
 # db = DataBase()
 
-def confirm(s):
-    return s == "y" or s == "Y" or s == "Yes"
 
 class Game:
 
@@ -142,7 +142,7 @@ class Game:
                 return True
 
         if card.cost <= player.untappedLands:
-            if.card.ctype == "Sorcery":
+            if card.ctype == "Sorcery":
                 if not self.canTarget(player, card.targets):
                     print("No valid targets.")
                     return False
@@ -161,6 +161,11 @@ class Game:
                 if len(self.pqueue) == 1:
                     print("Player " + self.pqueue[0].number + " has won the game!")
                     return True
+
+            for creature in player.creatures:
+                if creature.dealtLethal:
+                    player.creatures.remove(creature)
+                    creature.putOnGraveyard()
 
         return False
 
@@ -190,9 +195,13 @@ class Game:
 
         ## Beggining Phase
         # Untap - untap permanents of active player
-        for permanent in activePlayer.battlefield:
-            permanent.untap()
-            permanent.removeSickness()
+        for creature in activePlayer.creatures:
+            creature.untap()
+            creature.removeSickness()
+
+        for land in activePlayer.lands:
+            land.untap()
+            land.removeSickness()
 
         # Upkeep (not present in version alpha)
         if self.checkSBA():
@@ -211,10 +220,12 @@ class Game:
             c = input("Choose a card from your hand to play (0 will pass priority):")
             ## TODO: play the card
             if c != '0' and int(c) <= len(activePlayer.hand):
-                card = player.hand[int(c)-1]
+                card = activePlayer.hand[int(c)-1]
+
                 if self.canPlay(activePlayer, card):
-                    player.play(card)
+                    activePlayer.play(card)
                 else:
+                    print("You can't play this card.")
                     c = ''
             if self.checkSBA():
                 return True
@@ -226,19 +237,19 @@ class Game:
         for creature in activePlayer.creatures:
             if creature.canAttack():
                 c = input("Declare " + creature.card.name + " as an attacker? (y/N) ")
-                if confirm(c):
+                if utils.confirm(c):
                     creature.attack()
-                    combatPairings.[creature] = []
+                    combatPairings[creature] = []
 
 
         # Declare Blockers - Not Active Player
         for attacker in combatPairings:
             c = input("Block " + attacker.card.name + "? (y/N) ")
-            if confirm(c):
+            if utils.confirm(c):
                 for creature in opponent.creatures:
                     if creature.canBlock(attacker):
                         c = input("With " + creature.card.name + "? (y/N) ")
-                        if confirm(c):
+                        if utils.confirm(c):
                             creature.block(attacker)
                             combatPairings[attacker].append(creature)
 
@@ -316,7 +327,6 @@ class Game:
                 if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
                     blocker.dealDamage(attacker, curPower)
 
-        end = self.checkSBA()
         if self.checkSBA():
             return True
 
@@ -337,6 +347,7 @@ class Game:
                     player.play(card)
                 else:
                     c = ''
+
             if self.checkSBA():
                 return True
 

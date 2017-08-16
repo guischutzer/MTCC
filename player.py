@@ -1,4 +1,5 @@
 import random
+import utils
 
 class Player:
 
@@ -65,7 +66,7 @@ class Player:
     def showHand(self):
         i = 1
         for card in self.hand:
-            print(i, asterisk, ") ", card)
+            print(str(i) + ") " + card)
             i += 1
         return
 
@@ -73,7 +74,7 @@ class Player:
         card = self.library.pop()
         s = ""
         while s != "1" or s != "2":
-            s = input("The top card is " + card.name ". Do you want to (1) keep it in top or (2) put it at the bottom of the library?")
+            s = input("The top card is " + card.name + ". Do you want to (1) keep it in top or (2) put it at the bottom of the library?")
             if s == "1":
                 self.library.append(card)
             elif s == "2":
@@ -87,7 +88,7 @@ class Player:
 
         self.showHand()
         c = input("Keep hand? (Y/n)")
-        if confirm(c) or c == "":
+        if utils.confirm(c) or c == "":
             print("\n")
             if n < 7:
                 self.scry()

@@ -16,6 +16,9 @@ class Permanent:
         self.tapped = False
         self.sick = False
 
+    def putOnGraveyard(self):
+        self.owner.graveyard.append(self.card)
+
     def isPlayer(self):
         return False
 
