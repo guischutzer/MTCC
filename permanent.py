@@ -11,7 +11,7 @@ class Permanent:
         self.card = card
         self.abilities = c.copy(card.abilities)
         self.ctype = card.ctype
-        self.owner = player
+        self.owner = card.owner
         self.controller = player
         self.tapped = False
         self.sick = False

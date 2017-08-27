@@ -1,3 +1,2 @@
-20 Forest
-30 Pack Rat
-2 Runeclaw Bear
+20 Swamp
+40 Foul Imp

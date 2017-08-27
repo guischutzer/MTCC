@@ -4,6 +4,7 @@ import utils
 class Player:
 
     def __init__(self, number):
+        self.name = 'Unknown Player'
         self.life = 20
         self.hand = []
         self.library = []
@@ -14,6 +15,9 @@ class Player:
         self.active = False
         self.graveyard = []
         self.untappedLands = 0
+
+    def rename(self, name):
+        self.name = name
 
     def setLibrary(self, library):
         self.library = library
@@ -66,19 +70,19 @@ class Player:
     def showHand(self):
         i = 1
         for card in self.hand:
-            print(str(i) + ") " + card)
+            print(str(i) + ") " + card.name)
             i += 1
         return
 
-    def scry():
+    def scry(self):
         card = self.library.pop()
         s = ""
-        while s != "1" or s != "2":
-            s = input("The top card is " + card.name + ". Do you want to (1) keep it in top or (2) put it at the bottom of the library?")
-            if s == "1":
-                self.library.append(card)
-            elif s == "2":
-                self.library.insert(0, card)
+        s = input("The top card is " + card.name + ". Do you want to put it at the bottom of the library? (y/n) ")
+        if utils.confirm(s):
+            self.library.insert(0, card)
+        else:
+            self.library.append(card)
+
 
     def mulligan(self):
 
@@ -86,6 +90,7 @@ class Player:
         if n == 0:
             return True
 
+        print ("\nPlayer " + self.name + ":")
         self.showHand()
         c = input("Keep hand? (Y/n)")
         if utils.confirm(c) or c == "":

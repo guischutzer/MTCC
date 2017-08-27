@@ -1,8 +1,10 @@
 import argparse
 import random
 from player import Player
+from card import *
 import utils
 import copy as c
+import re
 
 # parser = argparse.ArgumentParser(description='Magic: the Gathering utilitary')
 # parser.add_argument('deck1',
@@ -20,8 +22,13 @@ class Game:
         self.player_1 = Player(1)
         self.player_2 = Player(2)
 
-        self.player_1.setLibrary(self.readDeck(deck1))
-        self.player_2.setLibrary(self.readDeck(deck2))
+        name = input("Choose a name for Player 1: ")
+        self.player_1.rename(name)
+        name = input("Choose a name for Player 2: ")
+        self.player_2.rename(name)
+
+        self.readDeck(deck1, self.player_1)
+        self.readDeck(deck2, self.player_2)
 
         self.pqueue = []
         actPlayerID = random.randrange(1, 3)
@@ -34,9 +41,15 @@ class Game:
         self.player_1.draw(7)
         self.player_2.draw(7)
 
-        keep = [False, False]
-        while not all(keep):
-            keep = [self.pqueue[0].mulligan(), self.pqueue[1].mulligan()]
+        print("\nPlayer " + self.pqueue[0].name + " starts the game.")
+
+        p1keep = False
+        p2keep = False
+        while  not p1keep or not p2keep:
+            if not p1keep:
+                p1keep = self.pqueue[0].mulligan()
+            if not p2keep:
+                p2keep = self.pqueue[1].mulligan()
 
         n = 0
         endGame = False # flag for ending the game (name may change)
@@ -195,6 +208,10 @@ class Game:
 
         ## Beggining Phase
         # Untap - untap permanents of active player
+
+        print("----------------------------------------------------------")
+        print("Turn " + str(tNumber) + " (" + activePlayer.name + ")")
+
         for creature in activePlayer.creatures:
             creature.untap()
             creature.removeSickness()
@@ -368,7 +385,7 @@ class Game:
 
         return False
 
-    def readDeck(self, filename):
+    def readDeck(self, filename, owner):
 
         library = []
         f = open(filename, 'r')
@@ -379,9 +396,9 @@ class Game:
             number = int(entry[0])
             name = " ".join(entry[1:])
             for i in range(number):
-                library.append(name)
+                library.append(self.createCard(name, owner))
 
-        return library
+        owner.setLibrary(library)
 
     def opponentOf(self, player):
         if self.player_1 == player:
@@ -405,6 +422,12 @@ class Game:
             self.pqueue.append(self.player_2)
             self.pqueue.append(self.player_1)
 
-
+    def createCard(self, cardname, owner):
+        card = None
+        classname = re.sub("[ \n]", "", cardname)
+        variables = locals()
+        command = "card = " + classname + "(owner)"
+        exec(command, globals(), variables)
+        return variables['card']
 
 jogo = Game("deck1.txt", "deck2.txt")
