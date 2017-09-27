@@ -74,6 +74,21 @@ class Player:
             i += 1
         return
 
+    def play(self, card):
+        if card.ctype == "Land":
+            permanent = Land(card, self)
+            self.lands.append(permanent)
+            return permanent
+
+        if card.ctype == "Creature":
+            permanent = Creature(card, self)
+            self.creatures.append(permanent)
+            return permanent
+
+        else:
+            self.graveyard.append(card)
+            return None
+
     def scry(self):
         card = self.library.pop()
         s = ""

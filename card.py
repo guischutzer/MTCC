@@ -13,8 +13,8 @@ class Card:
         self.targets = []
         self.owner = owner
 
-    def cmc(self, cost):
-        m = re.match("(\d?)(\w*)", cost).groups()
+    def cmc(self):
+        m = re.match("(\d?)(\w*)", self.cost).groups()
         c = 0
         if m[0] != "":
             c += int(m[0])
@@ -29,7 +29,10 @@ class Card:
 
         return c
 
-    def abtilities(self):
+    def abilities(self):
+        return
+
+    def effect(self, targets):
         return
 
     def __str__(self):
@@ -71,22 +74,26 @@ class VolcanicHammer(Card):
         self.ctype = "Sorcery"
         self.subtype = ""
         self.text = "Volcanic Hammer deals 3 damage to target creature or player."
-        self.targets = [("Creature", "Player")]
+        self.targets = [("OwnCreature", "OpponentCreature", "Player")]
         self.owner = owner
 
-    def effect(self, target):
-        target.takeDamage(3)
+    def effect(self, targets):
+        targets[0].takeDamage(3)
 
 class FoulImp(Card):
     def __init__(self, owner):
         self.name = "Foul Imp"
-        self.cost = "BB"
+        self.cost = "B"
         self.supertype = ""
         self.ctype = "Creature"
         self.subtype = "Imp"
-        self.text = "Flying. When Foul Imp enters the battlefield you lose 2 life. 2/2"
+        self.text = "Flying. When Foul Imp enters the battlefield you lose 1 life. 1/1"
         self.abilities = ["Flying"]
+        self.targets = []
         self.owner = owner
+        self.power = 1
+        self.tou = 1
 
-    def effect(self):
-        self.owner.loseLife(2)
+
+    def effect(self, targets):
+        self.owner.loseLife(1)

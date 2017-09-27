@@ -44,7 +44,10 @@ class Permanent:
         self.tapped = False
 
     def stats(self):
-        return self.card.name
+        virado = 'U'
+        if self.isTapped():
+            virado = 'T'
+        return (self.card.name + " " + virado)
 
     def resetPT(self):
         return
@@ -55,12 +58,13 @@ class Permanent:
 class Land(Permanent):
 
     def __init__(self, card, player):
-        super().__init__()
+        super().__init__(card, player)
         self.controller.untappedLands += 1
 
     def untap(self):
         if self.tapped:
             self.controller.untappedLands += 1
+            print("Desvirei um terreno")
         self.tapped = False
 
     def tap(self):
@@ -72,7 +76,7 @@ class Land(Permanent):
 class Creature(Permanent):
 
     def __init__(self, card, player):
-        super().__init__()
+        super().__init__(card, player)
         self.dealtLethal = False
 
         self.power = card.power
@@ -154,4 +158,7 @@ class Creature(Permanent):
         return "Hexproof" in self.currentAbilities
 
     def stats(self):
-        return self.card.name + " " + str(self.curPower) "/" + str(self.curTou) + "(" + str(self.damage) + ")"
+        virado = 'U'
+        if self.tapped:
+            virado = 'T'
+        return self.card.name + " " + virado + " " + str(self.curPower) + "/" + str(self.curTou) + "(" + str(self.damage) + ")"
