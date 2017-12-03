@@ -114,7 +114,7 @@ class Game:
             if "OwnCreature" in targetType:
                 for creature in ownCreatures:
                     curList.append(creature)
-                    print(optionNumber + ") " + creature.stats())
+                    print(str(optionNumber) + ") " + creature.stats())
                     optionNumber += 1
             if "OpponentCreature" in targetType:
                 for creature in opponentCreatures:
@@ -189,11 +189,10 @@ class Game:
             player.lands.append(permanent)
             return permanent
 
-        while paidMana < card.cmc():
-            for land in player.lands:
-                if not land.isTapped():
-                    land.tap()
-                    paidMana += 1
+        for land in player.lands:
+            if not land.isTapped() and paidMana < card.cmc():
+                land.tap()
+                paidMana += 1
         if card.ctype == "Creature":
             permanent = Creature(card, player)
             player.creatures.append(permanent)
