@@ -339,7 +339,7 @@ class Game:
             print(combatPairings[attacker])
 
             if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
-                remainingDamage = attacker.power
+                remainingDamage = attacker.curPower
 
                 for blocker in combatPairings[attacker]:
                     neededDamage = blocker.curTou - blocker.damage

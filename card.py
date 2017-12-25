@@ -173,7 +173,7 @@ class LightningHounds(Card):
 
 class FlametongueKavu(Card):
     def __init__(self,owner):
-        self.name = "FlametongueKavu"
+        self.name = "Flametongue Kavu"
         self.cost = "3R"
         self.supertype = ""
         self.ctype = "Creature"
