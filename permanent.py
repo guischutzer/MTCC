@@ -64,7 +64,6 @@ class Land(Permanent):
     def untap(self):
         if self.tapped:
             self.controller.untappedLands += 1
-            print("Desvirei um terreno")
         self.tapped = False
 
     def tap(self):
@@ -120,7 +119,6 @@ class Creature(Permanent):
         self.attacking = True
 
     def block(self, attacker):
-        attacker.isBlocked()
         self.blocking = True
 
     def canAttack(self):
@@ -128,7 +126,7 @@ class Creature(Permanent):
 
     def canBlock(self, attacker):
 
-        if not self.tapped or self.blocking or self.controller.isActive:
+        if self.tapped or self.blocking:
             return False
 
         if "Flying" in attacker.currentAbilities:

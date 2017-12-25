@@ -212,7 +212,7 @@ class Game:
         for creature in self.activePlayer.creatures:
             print(creature.stats())
 
-        print("\nOpponent: " + self.opponent.name + "- " + str(self.opponent.life) + " life")
+        print("\nOpponent: " + self.opponent.name + " - " + str(self.opponent.life) + " life")
         for land in self.opponent.lands:
             print(land.stats())
         for creature in self.opponent.creatures:
@@ -264,6 +264,7 @@ class Game:
         print("----------------------------------------------------------")
 
         # Declare Attackers - Active Player
+        print(activePlayer.name + ", declare attackers:")
         combatPairings = {}
         for creature in activePlayer.creatures:
             if creature.canAttack():
@@ -274,15 +275,14 @@ class Game:
 
 
         # Declare Blockers - Not Active Player
+        print(opponent.name + ", declare blockers: ")
         for attacker in combatPairings:
-            c = input("Block " + attacker.card.name + "? (y/N) ")
-            if utils.confirm(c):
-                for creature in opponent.creatures:
-                    if creature.canBlock(attacker):
-                        c = input("With " + creature.card.name + "? (y/N) ")
-                        if utils.confirm(c):
-                            creature.block(attacker)
-                            combatPairings[attacker].append(creature)
+            for creature in opponent.creatures:
+                if creature.canBlock(attacker):
+                    c = input("Block " + attacker.card.name + " with " + creature.card.name + "? (y/N) ")
+                    if utils.confirm(c):
+                        creature.block(attacker)
+                        combatPairings[attacker].append(creature)
 
         ## Choosing Block Order - Not Active Player
         for attacker in combatPairings:
@@ -327,7 +327,7 @@ class Game:
 
             for blocker in combatPairings[attacker]:
                 if blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    blocker.dealDamage(attacker, curPower)
+                    blocker.dealDamage(attacker, blocker.curPower)
 
         if self.checkSBA():
             return True
@@ -335,6 +335,8 @@ class Game:
         # - Combat Damage
 
         for attacker in combatPairings:
+
+            print(combatPairings[attacker])
 
             if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
                 remainingDamage = attacker.power
@@ -356,7 +358,7 @@ class Game:
 
             for blocker in combatPairings[attacker]:
                 if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    blocker.dealDamage(attacker, curPower)
+                    blocker.dealDamage(attacker, blocker.curPower)
 
         if self.checkSBA():
             return True
@@ -388,7 +390,7 @@ class Game:
             activePlayer.showHand()
             c = 0
             while c < 1 or c > activePlayer.cardsInHand():
-                c = int(input("Choose a card from your hand to discard:"))
+                c = int(input("Choose a card from your hand to discard: "))
             card = activePlayer.hand[c - 1]
             activePlayer.discard(card)
 
@@ -398,13 +400,14 @@ class Game:
         c = ''
         while c != 0:
             self.activePlayer.showHand()
-            c = input("Choose a card from your hand to play (0 will pass priority, 'p' prints the game state):")
+            c = input("Choose a card from your hand (0 will pass priority, 'p' prints the game state): ")
             if c == 'p':
                 c = -1
                 self.printGameState()
             c = int(c)
             if c > 0 and c <= len(self.activePlayer.hand):
                 card = self.activePlayer.hand[c - 1]
+                print("\n" + str(card))
                 if self.canPlay(self.activePlayer, card):
                     self.play(self.activePlayer, card)
                 else:
