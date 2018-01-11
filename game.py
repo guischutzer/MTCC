@@ -7,21 +7,39 @@ import utils
 from copy import copy
 import re
 
-# parser = argparse.ArgumentParser(description='Magic: the Gathering utilitary')
+parser = argparse.ArgumentParser(description='Magic: the Gathering AI utilitary')
+parser.add_argument("-a1", "--agent1",
+                    help="specify agent for player 1")
+parser.add_argument("-a2", "--agent2",
+                    help="specify agent for player 2")
+parser.add_argument("-d1", "--deck1", default='deck1.txt',
+                    help="specify deck for player 1")
+parser.add_argument("-d2", "--deck2", default='deck2.txt',
+                    help="specify deck for player 2")
+# parser.add_argument('--decks', help='select decks')
 # parser.add_argument('deck1',
 #                     help='Deck file (player 1)')
 # parser.add_argument('deck2',
 #                     help='Deck file (player 2)')
-#
-# args = parser.parse_args()
-# db = DataBase()
+
+args = parser.parse_args()
+
+jogo = Game(args.agent1, "deck1.txt", args.agent1, "deck2.txt")
 
 
 class Game:
 
-    def __init__(self, deck1, deck2):
-        self.player_1 = Player(1)
-        self.player_2 = Player(2)
+    def __init__(self, agent1, deck1, agent2, deck2):
+
+        if agent1 is None:
+            self.player_1 = Player(1)
+        else:
+            self.player_1 = Agent(1)
+
+        if agent2 is None:
+            self.player_2 = Player(2)
+        else:
+            self.player_2 = Agent(2)
 
         name = input("Choose a name for Player 1: ")
         self.player_1.rename(name)
@@ -461,5 +479,3 @@ class Game:
         command = "card = " + classname + "(owner)"
         exec(command, globals(), variables)
         return variables['card']
-
-jogo = Game("deck1.txt", "deck2.txt")

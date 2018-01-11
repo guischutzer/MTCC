@@ -121,3 +121,103 @@ class Player:
         self.draw(n - 1)
 
         return False
+
+class Agent(Player):
+
+    def __init__(self, number):
+        super.__init__(number)
+        self.landRewards = []
+        if self.onThePlay:
+            self.landRewards = [-7, -3, 3, 4, 2, -1, -4, -6]
+        else
+            self.landRewards = [-4,  0, 5, 6, 3,  0, -3, -5]
+
+        self.mullUtilities = [None, None, None, None, None, None, None]
+        self.keepRewards  = [[None, None, None, None, None, None, None, None],
+                             [None, None, None, None, None, None, None],
+                             [None, None, None, None, None, None],
+                             [None, None, None, None, None],
+                             [None, None, None, None],
+                             [None, None, None],
+                             [None, None],
+                             [None]]
+        self.mullProbblty = [[None, None, None, None, None, None, None],
+                             [None, None, None, None, None, None],
+                             [None, None, None, None, None],
+                             [None, None, None, None],
+                             [None, None, None],
+                             [None, None],
+                             [None]]
+
+    def setLibrary(self, deck):
+        self.library = deck
+
+        self.landsInLibrary = 0
+        for card in self.library:
+            if card.ctype is 'Land':
+                self.landsInLibrary += 1
+
+    def getKeepReward(self, hand):
+
+        alpha = 3
+
+        lands = 0
+        nonlands = 0
+
+        for card in hand:
+            if card.ctype is 'Land':
+                lands += 1
+            else
+                nonlands += 1
+
+        if self.keepRewards[len(hand)][lands] is not None:
+            return self.keepRewards[len(hand)][lands]
+
+        reward = self.landRewards[lands] + alpha*len(hand)
+        self.keepRewards[len(hand)][lands] = reward
+
+        return reward
+
+    def getMullProb(self, i, j):
+
+        if self.mullProbblty[i][j] is not None:
+            return self.mullProbblty[i][j]
+
+        prob = utils.binom(self.landsInLibrary, j)*utils.binom(60 - self.landsInLibrary, i - j)/utils.binom(60, i)
+        self.mullProbblty[i][j] = prob
+
+        return prob
+
+    def getMullUtility(self, i):
+
+        if self.mullUtilities[i] is not None:
+            return self.mullUtilities[i]
+
+        utility = 0
+        for j in range(i - 1):
+            utility += getMullProb(i - 1, j)*getMullUtility(i - 1)
+
+        self.mullUtilities[i] = utility
+
+    def mulligan(self):
+
+        n = len(self.hand)
+        if n == 0:
+            return True
+
+        keepReward = getKeepReward(self.hand)
+        if keepReward >= self.getMullUtility(n):
+            print("\nPlayer " + self.name + " has kept this hand.")
+            if n < 7:
+                self.scry()
+            return True
+
+        print("\nPlayer " + self.name + " mulligans down to " + str(n - 1) + " cards.")
+
+        while self.hand != []:
+            self.library.append(self.hand.pop())
+
+        self.shuffle()
+        self.draw(n - 1)
+
+        return False
