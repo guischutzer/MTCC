@@ -113,7 +113,11 @@ class Game:
 
         return True
 
-    def getLegalTargets(self, player, targets):
+    def getLegalTargets(self, player, card):
+
+        if card.legalTargets is not []:
+            return card.legalTargets
+
         legalTargets = []
 
         opponent = self.opponentOf(player)
@@ -124,7 +128,7 @@ class Game:
             if creature.hasHexproof():
                 opponentCreatures.remove(creature)
 
-        for possibleTarget in targets:
+        for possibleTarget in card.targets:
             curList = []
             for targetType in possibleTarget:
                 if "OwnCreature" in targetType:
@@ -144,6 +148,7 @@ class Game:
 
             legalTargets.append(curList)
 
+        card.setLegalTargets(legalTargets)
         return legalTargets
 
     def chooseTargets(self, player, targets):
@@ -253,7 +258,8 @@ class Game:
             return permanent
 
         if card.ctype == "Sorcery":
-            card.effect(self.chooseTargets(player, card.targets))
+            legalTargets = self.getLegalTargets(player, card.targets)
+            card.effect(player.chooseTargets(legalTargets))
             player.graveyard.append(card)
             return None
 
@@ -450,6 +456,10 @@ class Game:
 
     def mainPhase(self):
         c = ''
+
+        for card in self.activePlayer.hand:
+            card.setLegalTargets([])
+
         while c != 0:
             self.activePlayer.showHand()
             c = input("Choose a card from your hand (0 will pass priority, 'p' prints the game state): ")

@@ -44,6 +44,9 @@ class Card:
         s += self.text + "\n"
         return s
 
+    def setLegalTargets(legalTargets):
+        self.legalTargets = legalTargets
+
 class Mountain(Card):
     def __init__(self, owner):
         self.name = "Mountain"

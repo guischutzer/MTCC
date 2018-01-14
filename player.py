@@ -89,7 +89,7 @@ class Player:
             self.graveyard.append(card)
             return None
 
-    def chooseTargets(self, player, legalTargets):
+    def chooseTargets(self, legalTargets):
 
         chosenTargets = []
 
@@ -100,10 +100,10 @@ class Player:
             for entry in target:
                 if isinstance(entry, Creature):
                     print(entry.owner.name + "'s " + str(optionNumber) + ") " + entry.stats())
-                elif entry is not player:
-                    print(str(optionNumber) + ") Opponent")
-                else:
+                elif entry is self:
                     print(str(optionNumber) + ") You")
+                else:
+                    print(str(optionNumber) + ") Opponent")
                 optionNumber += 1
             c = 0
             while c < 1 or c > len(target):
