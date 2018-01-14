@@ -89,6 +89,30 @@ class Player:
             self.graveyard.append(card)
             return None
 
+    def chooseTargets(self, player, legalTargets):
+
+        chosenTargets = []
+
+        targetNumber = 1
+        for target in legalTargets:
+            print("Possible targets for the target number " + str(targetNumber) + ":")
+            optionNumber = 1
+            for entry in target:
+                if isinstance(entry, Creature):
+                    print(entry.owner.name + "'s " + str(optionNumber) + ") " + entry.stats())
+                elif entry is not player:
+                    print(str(optionNumber) + ") Opponent")
+                else:
+                    print(str(optionNumber) + ") You")
+                optionNumber += 1
+            c = 0
+            while c < 1 or c > len(target):
+                c = int(input("Choose a target: "))
+            chosenTarget = target[c - 1]
+            chosenTargets.append(chosenTarget)
+
+        return chosenTargets
+
     def scry(self):
         card = self.library.pop()
         s = ""
@@ -125,11 +149,24 @@ class Player:
 class Agent(Player):
 
     def __init__(self, number):
-        super.__init__(number)
+        self.name = 'Unknown Player'
+        self.life = 20
+        self.hand = []
+        self.library = []
+        self.lose = False
+        self.number = number
+        self.creatures = []
+        self.lands = []
+        self.active = False
+        self.graveyard = []
+        self.untappedLands = 0
         self.landRewards = []
+
+        self.onThePlay = True
+
         if self.onThePlay:
             self.landRewards = [-7, -3, 3, 4, 2, -1, -4, -6]
-        else
+        else:
             self.landRewards = [-4,  0, 5, 6, 3,  0, -3, -5]
 
         self.mullUtilities = [None, None, None, None, None, None, None]
@@ -167,7 +204,7 @@ class Agent(Player):
         for card in hand:
             if card.ctype is 'Land':
                 lands += 1
-            else
+            else:
                 nonlands += 1
 
         if self.keepRewards[len(hand)][lands] is not None:
@@ -207,12 +244,12 @@ class Agent(Player):
 
         keepReward = getKeepReward(self.hand)
         if keepReward >= self.getMullUtility(n):
-            print("\nPlayer " + self.name + " has kept this hand.")
+            print("\nAgent " + self.name + " has kept this hand.")
             if n < 7:
                 self.scry()
             return True
 
-        print("\nPlayer " + self.name + " mulligans down to " + str(n - 1) + " cards.")
+        print("\nAgent " + self.name + " mulligans down to " + str(n - 1) + " cards.")
 
         while self.hand != []:
             self.library.append(self.hand.pop())
@@ -221,3 +258,13 @@ class Agent(Player):
         self.draw(n - 1)
 
         return False
+
+    def scry(self):
+        card = self.library.pop()
+        bottom = random.choice([True, False])
+        if bottom:
+            self.library.insert(0, card)
+            print("\nAgent " + self.name + " puts the top card of its library at the bottom.")
+        else:
+            self.library.append(card)
+            print("\nAgent " + self.name + " keeps the top card of its library.")

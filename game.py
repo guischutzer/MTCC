@@ -113,6 +113,39 @@ class Game:
 
         return True
 
+    def getLegalTargets(self, player, targets):
+        legalTargets = []
+
+        opponent = self.opponentOf(player)
+        ownCreatures = copy(player.creatures)
+
+        opponentCreatures = copy(opponent.creatures)
+        for creature in opponentCreatures:
+            if creature.hasHexproof():
+                opponentCreatures.remove(creature)
+
+        for possibleTarget in targets:
+            curList = []
+            for targetType in possibleTarget:
+                if "OwnCreature" in targetType:
+                    for creature in ownCreatures:
+                        curList.append(creature)
+
+                if "OpponentCreature" in targetType:
+                    for creature in opponentCreatures:
+                        curList.append(creature)
+
+                if "Player" in targetType:
+                    curList.append(player)
+                    curList.append(opponent)
+
+                if "Opponent" in targetType:
+                    curList.append(opponent)
+
+            legalTargets.append(curList)
+
+        return legalTargets
+
     def chooseTargets(self, player, targets):
         chosenTargets = []
 
@@ -215,7 +248,8 @@ class Game:
             permanent = Creature(card, player)
             player.creatures.append(permanent)
             if self.canTarget(player, card.targets):
-                card.effect(self.chooseTargets(player, card.targets))
+                legalTargets = self.getLegalTargets(player, card.targets)
+                card.effect(player.chooseTargets(legalTargets))
             return permanent
 
         if card.ctype == "Sorcery":
