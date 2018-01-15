@@ -162,7 +162,7 @@ class Agent(Player):
         self.untappedLands = 0
         self.landRewards = []
 
-        self.verbous = verbosity
+        self.verbose = True
         self.onThePlay = onThePlay
 
         if self.onThePlay:
@@ -170,14 +170,21 @@ class Agent(Player):
         else:
             self.landRewards = [-4,  0, 5, 6, 3,  0, -3, -5]
 
-        self.mullUtilities = [None, None, None, None, None, None, None, None]
-        self.keepRewards  = [[None, None, None, None, None, None, None, None],
-                             [None, None, None, None, None, None, None],
-                             [None, None, None, None, None, None],
-                             [None, None, None, None, None],
-                             [None, None, None, None],
-                             [None, None, None],
-                             [None, None],
+        self.value = [[None, None, None, None, None, None, None, None],
+                               [None, None, None, None, None, None, None],
+                               [None, None, None, None, None, None],
+                               [None, None, None, None, None],
+                               [None, None, None, None],
+                               [None, None, None],
+                               [None, None],
+                               [None]]
+        self.keepRewards =  [[None, None, None, None, None, None, None, None],
+                              [None, None, None, None, None, None, None],
+                              [None, None, None, None, None, None],
+                              [None, None, None, None, None],
+                              [None, None, None, None],
+                              [None, None, None],
+                              [None, None],
                              [None]]
         self.mullProbblty = [[None, None, None, None, None, None, None],
                              [None, None, None, None, None, None],
@@ -220,6 +227,24 @@ class Agent(Player):
 
         return reward
 
+
+    def valueIteration(self):
+
+        for i in range(7, -1, -1):
+            for j in range(i + 1):
+                self.value[7 - i][j] = self.getKeepReward(i, j)
+
+        for epoch in range(1, 9):
+            for i in range(7, -1, -1):
+                for j in range(i + 1):
+                    mullValue = 0
+                    for jLine in range(i):
+                        print("i: " + str(i) + " j: " + str(j) + " j': " + str(jLine))
+                        mullValue += self.getMullProb(i - 1, jLine)*self.value[7 - (i - 1)][jLine]
+                    if mullValue >= self.getKeepReward(i, j):
+                        self.value[7 - i][j] = mullValue
+
+
     def getMullProb(self, i, j):
 
         if self.mullProbblty[6 - i][j] is not None:
@@ -230,35 +255,25 @@ class Agent(Player):
 
         return prob
 
-    def getMullUtility(self, i):
-
-        if self.mullUtilities[i] is not None:
-            return self.mullUtilities[i]
-
-        utility = 0
-        for j in range(i):
-            utility += self.getMullProb(i - 1, j)*self.getKeepReward(i - 1, j)
-
-        print(utility)
-
-        self.mullUtilities[i] = utility
-        return utility
 
     def mulligan(self):
+
+        if self.value[0][0] is None:
+            self.valueIteration()
 
         n = len(self.hand)
         if n == 0:
             return True
 
         keepReward = self.getHandReward(self.hand)
-        if self.verbous:
+        if self.verbose:
             print("Keep: " + str(keepReward) + " Mull: " + str(self.getMullUtility(n)) )
         if keepReward >= self.getMullUtility(n):
             print("\nAgent " + self.name + " has kept this hand.")
             if n < 7:
                 self.scry()
-            if self.verbous:
-                print(str(self.mullUtilities) + "\n")
+            if self.verbose:
+                print(str(self.utilities) + "\n")
                 print(str(self.mullProbblty) + "\n")
                 print(str(self.keepRewards))
             return True

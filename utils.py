@@ -7,3 +7,5 @@ def confirm(c):
 
 def binom(a, b):
     return math.factorial(a)/(math.factorial(b)*math.factorial(a - b))
+
+colors = ['W', 'U', 'B', 'R', 'G']
