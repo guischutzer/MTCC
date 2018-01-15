@@ -148,7 +148,7 @@ class Player:
 
 class Agent(Player):
 
-    def __init__(self, number):
+    def __init__(self, number, onThePlay, verbosity=False):
         self.name = 'Unknown Player'
         self.life = 20
         self.hand = []
@@ -162,14 +162,15 @@ class Agent(Player):
         self.untappedLands = 0
         self.landRewards = []
 
-        self.onThePlay = True
+        self.verbous = verbosity
+        self.onThePlay = onThePlay
 
         if self.onThePlay:
             self.landRewards = [-7, -3, 3, 4, 2, -1, -4, -6]
         else:
             self.landRewards = [-4,  0, 5, 6, 3,  0, -3, -5]
 
-        self.mullUtilities = [None, None, None, None, None, None, None]
+        self.mullUtilities = [None, None, None, None, None, None, None, None]
         self.keepRewards  = [[None, None, None, None, None, None, None, None],
                              [None, None, None, None, None, None, None],
                              [None, None, None, None, None, None],
@@ -194,9 +195,7 @@ class Agent(Player):
             if card.ctype is 'Land':
                 self.landsInLibrary += 1
 
-    def getKeepReward(self, hand):
-
-        alpha = 3
+    def getHandReward(self, hand):
 
         lands = 0
         nonlands = 0
@@ -207,21 +206,27 @@ class Agent(Player):
             else:
                 nonlands += 1
 
-        if self.keepRewards[len(hand)][lands] is not None:
-            return self.keepRewards[len(hand)][lands]
+        return self.getKeepReward(len(hand), lands)
 
-        reward = self.landRewards[lands] + alpha*len(hand)
-        self.keepRewards[len(hand)][lands] = reward
+    def getKeepReward(self, i, j):
+
+        alpha = 3.5
+
+        if self.keepRewards[7 - i][j] is not None:
+            return self.keepRewards[7 - i][j]
+
+        reward = self.landRewards[j] + alpha*i
+        self.keepRewards[7 - i][j] = reward
 
         return reward
 
     def getMullProb(self, i, j):
 
-        if self.mullProbblty[i][j] is not None:
-            return self.mullProbblty[i][j]
+        if self.mullProbblty[6 - i][j] is not None:
+            return self.mullProbblty[6 - i][j]
 
         prob = utils.binom(self.landsInLibrary, j)*utils.binom(60 - self.landsInLibrary, i - j)/utils.binom(60, i)
-        self.mullProbblty[i][j] = prob
+        self.mullProbblty[6 - i][j] = prob
 
         return prob
 
@@ -231,10 +236,13 @@ class Agent(Player):
             return self.mullUtilities[i]
 
         utility = 0
-        for j in range(i - 1):
-            utility += getMullProb(i - 1, j)*getMullUtility(i - 1)
+        for j in range(i):
+            utility += self.getMullProb(i - 1, j)*self.getKeepReward(i - 1, j)
+
+        print(utility)
 
         self.mullUtilities[i] = utility
+        return utility
 
     def mulligan(self):
 
@@ -242,11 +250,17 @@ class Agent(Player):
         if n == 0:
             return True
 
-        keepReward = getKeepReward(self.hand)
+        keepReward = self.getHandReward(self.hand)
+        if self.verbous:
+            print("Keep: " + str(keepReward) + " Mull: " + str(self.getMullUtility(n)) )
         if keepReward >= self.getMullUtility(n):
             print("\nAgent " + self.name + " has kept this hand.")
             if n < 7:
                 self.scry()
+            if self.verbous:
+                print(str(self.mullUtilities) + "\n")
+                print(str(self.mullProbblty) + "\n")
+                print(str(self.keepRewards))
             return True
 
         print("\nAgent " + self.name + " mulligans down to " + str(n - 1) + " cards.")
@@ -256,6 +270,8 @@ class Agent(Player):
 
         self.shuffle()
         self.draw(n - 1)
+
+
 
         return False
 
