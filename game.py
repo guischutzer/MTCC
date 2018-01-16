@@ -16,12 +16,12 @@ class Game:
         if agent1 is None:
             self.player_1 = Player(1)
         else:
-            self.player_1 = Agent(1, actPlayerID is 1)
+            self.player_1 = MulliganAgent(1, actPlayerID is 1, verbosity)
 
         if agent2 is None:
             self.player_2 = Player(2)
         else:
-            self.player_2 = Agent(2, actPlayerID is 2)
+            self.player_2 = MulliganAgent(2, actPlayerID is 2, verbosity)
 
         name = input("Choose a name for Player 1: ")
         self.player_1.rename(name)
@@ -97,7 +97,7 @@ class Game:
 
     def getLegalTargets(self, player, card):
 
-        if card.legalTargets is not []:
+        if card.legalTargets is not None:
             return card.legalTargets
 
         legalTargets = []

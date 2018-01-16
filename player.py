@@ -146,7 +146,7 @@ class Player:
 
         return False
 
-class Agent(Player):
+class MulliganAgent(Player):
 
     def __init__(self, number, onThePlay, verbosity=False):
         self.name = 'Unknown Player'
@@ -170,7 +170,7 @@ class Agent(Player):
         else:
             self.landRewards = [-4,  0, 5, 6, 3,  0, -3, -5]
 
-        self.value = [[None, None, None, None, None, None, None, None],
+        self.mulliganValue = [[None, None, None, None, None, None, None, None],
                                [None, None, None, None, None, None, None],
                                [None, None, None, None, None, None],
                                [None, None, None, None, None],
@@ -186,7 +186,7 @@ class Agent(Player):
                               [None, None, None],
                               [None, None],
                              [None]]
-        self.mullProbblty = [[None, None, None, None, None, None, None],
+        self.mulliganProb = [[None, None, None, None, None, None, None],
                              [None, None, None, None, None, None],
                              [None, None, None, None, None],
                              [None, None, None, None],
@@ -205,13 +205,10 @@ class Agent(Player):
     def getHandReward(self, hand):
 
         lands = 0
-        nonlands = 0
 
         for card in hand:
             if card.ctype is 'Land':
                 lands += 1
-            else:
-                nonlands += 1
 
         return self.getKeepReward(len(hand), lands)
 
@@ -228,53 +225,63 @@ class Agent(Player):
         return reward
 
 
-    def valueIteration(self):
+    def mulliganValueIteration(self):
 
         for i in range(7, -1, -1):
             for j in range(i + 1):
-                self.value[7 - i][j] = self.getKeepReward(i, j)
+                self.mulliganValue[7 - i][j] = self.getKeepReward(i, j)
 
         for epoch in range(1, 9):
             for i in range(7, -1, -1):
                 for j in range(i + 1):
                     mullValue = 0
                     for jLine in range(i):
-                        print("i: " + str(i) + " j: " + str(j) + " j': " + str(jLine))
-                        mullValue += self.getMullProb(i - 1, jLine)*self.value[7 - (i - 1)][jLine]
+                        mullValue += self.getMulliganProb(i - 1, jLine)*self.mulliganValue[7 - (i - 1)][jLine]
                     if mullValue >= self.getKeepReward(i, j):
-                        self.value[7 - i][j] = mullValue
+                        self.mulliganValue[7 - i][j] = mullValue
 
 
-    def getMullProb(self, i, j):
+    def getMulliganProb(self, i, j):
 
-        if self.mullProbblty[6 - i][j] is not None:
-            return self.mullProbblty[6 - i][j]
+        if self.mulliganProb[6 - i][j] is not None:
+            return self.mulliganProb[6 - i][j]
 
         prob = utils.binom(self.landsInLibrary, j)*utils.binom(60 - self.landsInLibrary, i - j)/utils.binom(60, i)
-        self.mullProbblty[6 - i][j] = prob
+        self.mulliganProb[6 - i][j] = prob
 
         return prob
 
+    def getMulliganValue(self, hand):
+
+        lands = 0
+
+        for card in hand:
+            if card.ctype is 'Land':
+                lands += 1
+
+        return self.mulliganValue[7 - len(hand)][lands]
 
     def mulligan(self):
 
-        if self.value[0][0] is None:
-            self.valueIteration()
+        if self.mulliganValue[0][0] is None:
+            self.mulliganValueIteration()
+
+        print(self.mulliganValue)
 
         n = len(self.hand)
         if n == 0:
             return True
 
         keepReward = self.getHandReward(self.hand)
-        if self.verbose:
-            print("Keep: " + str(keepReward) + " Mull: " + str(self.getMullUtility(n)) )
-        if keepReward >= self.getMullUtility(n):
+        mullValue = self.getMulliganValue(self.hand)
+
+        if keepReward == mullValue:
             print("\nAgent " + self.name + " has kept this hand.")
             if n < 7:
                 self.scry()
             if self.verbose:
-                print(str(self.utilities) + "\n")
-                print(str(self.mullProbblty) + "\n")
+                print(str(self.mulliganValue) + "\n")
+                print(str(self.mulliganProb) + "\n")
                 print(str(self.keepRewards))
             return True
 
@@ -285,7 +292,6 @@ class Agent(Player):
 
         self.shuffle()
         self.draw(n - 1)
-
 
 
         return False
