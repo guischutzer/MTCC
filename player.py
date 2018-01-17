@@ -96,9 +96,10 @@ class Player:
         targetNumber = 1
         for target in legalTargets:
             print("Possible targets for the target number " + str(targetNumber) + ":")
+            targetNumber += 1
             optionNumber = 1
             for entry in target:
-                if isinstance(entry, Creature):
+                if not isinstance(entry, Player):
                     print(entry.owner.name + "'s " + str(optionNumber) + ") " + entry.stats())
                 elif entry is self:
                     print(str(optionNumber) + ") You")
@@ -162,7 +163,7 @@ class MulliganAgent(Player):
         self.untappedLands = 0
         self.landRewards = []
 
-        self.verbose = True
+        self.verbose = verbosity
         self.onThePlay = onThePlay
 
         if self.onThePlay:
@@ -193,6 +194,7 @@ class MulliganAgent(Player):
                              [None, None, None],
                              [None, None],
                              [None]]
+
 
     def setLibrary(self, deck):
         self.library = deck
@@ -266,7 +268,8 @@ class MulliganAgent(Player):
         if self.mulliganValue[0][0] is None:
             self.mulliganValueIteration()
 
-        print(self.mulliganValue)
+        if self.verbose:
+            print(self.mulliganValue)
 
         n = len(self.hand)
         if n == 0:
@@ -305,3 +308,23 @@ class MulliganAgent(Player):
         else:
             self.library.append(card)
             print("\nAgent " + self.name + " keeps the top card of its library.")
+
+class RandomAgent(MulliganAgent):
+
+    def chooseAction(self, legalActions):
+
+        return random.randrange(0, len(legalActions))
+
+    def chooseTargets(self, legalTargets):
+
+        chosenTargets = []
+
+        targetNumber = 1
+        for target in legalTargets:
+            index = random.randrange(0, len(target))
+            chosenTarget = target[index]
+            chosenTargets.append(chosenTarget)
+            print("Agent " + self.name + " has chosen " + chosenTarget.name + " as target number " + targetNumber + ".")
+            targetNumber += 1
+
+        return chosenTargets

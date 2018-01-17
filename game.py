@@ -15,11 +15,15 @@ class Game:
 
         if agent1 is None:
             self.player_1 = Player(1)
+        elif agent1 is "random" or agent1 is "Random":
+            self.player_1 = RandomAgent(1, actPlayerID is 1, verbosity)
         else:
             self.player_1 = MulliganAgent(1, actPlayerID is 1, verbosity)
 
         if agent2 is None:
             self.player_2 = Player(2)
+        elif agent2 is "random" or agent2 is "Random":
+            self.player_2 = RandomAgent(2, actPlayerID is 2, verbosity)
         else:
             self.player_2 = MulliganAgent(2, actPlayerID is 2, verbosity)
 
@@ -97,9 +101,6 @@ class Game:
 
     def getLegalTargets(self, player, card):
 
-        if card.legalTargets is not None:
-            return card.legalTargets
-
         legalTargets = []
 
         opponent = self.opponentOf(player)
@@ -111,26 +112,27 @@ class Game:
                 opponentCreatures.remove(creature)
 
         for possibleTarget in card.targets:
+            print(possibleTarget)
             curList = []
-            for targetType in possibleTarget:
-                if "OwnCreature" in targetType:
-                    for creature in ownCreatures:
-                        curList.append(creature)
+            if "OwnCreature" in possibleTarget:
+                for creature in ownCreatures:
+                    curList.append(creature)
 
-                if "OpponentCreature" in targetType:
-                    for creature in opponentCreatures:
-                        curList.append(creature)
+            if "OpponentCreature" in possibleTarget:
+                for creature in opponentCreatures:
+                    curList.append(creature)
 
-                if "Player" in targetType:
-                    curList.append(player)
-                    curList.append(opponent)
+            if "Player" in possibleTarget:
+                curList.append(player)
+                curList.append(opponent)
 
-                if "Opponent" in targetType:
-                    curList.append(opponent)
+            if "Opponent" in possibleTarget:
+                curList.append(opponent)
 
             legalTargets.append(curList)
 
-        card.setLegalTargets(legalTargets)
+        print(legalTargets)
+
         return legalTargets
 
     def chooseTargets(self, player, targets):
@@ -235,7 +237,7 @@ class Game:
             permanent = Creature(card, player)
             player.creatures.append(permanent)
             if self.canTarget(player, card.targets):
-                legalTargets = self.getLegalTargets(player, card.targets)
+                legalTargets = self.getLegalTargets(player, card)
                 card.effect(player.chooseTargets(legalTargets))
             return permanent
 
@@ -438,9 +440,6 @@ class Game:
 
     def mainPhase(self):
         c = ''
-
-        for card in self.activePlayer.hand:
-            card.setLegalTargets([])
 
         while c != 0:
             self.activePlayer.showHand()
