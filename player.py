@@ -147,6 +147,20 @@ class Player:
 
         return False
 
+    def mainPhaseAction(self, legalActions):
+        c = ''
+
+        while c != 0:
+            self.showHand()
+            c = input("Choose a card from your hand (0 will pass priority, 'p' prints the game state): ")
+            if c == 'p':
+                return c
+            c = int(c)
+            if c > 0 and c <= len(self.activePlayer.hand):
+                return c
+
+        return 0
+
 class MulliganAgent(Player):
 
     def __init__(self, number, onThePlay, verbosity=False):
@@ -310,6 +324,8 @@ class MulliganAgent(Player):
             print("\nAgent " + self.name + " keeps the top card of its library.")
 
 class RandomAgent(MulliganAgent):
+
+    def mainPhase(self):
 
     def chooseAction(self, legalActions):
 

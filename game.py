@@ -190,7 +190,7 @@ class Game:
 
         if card.ctype == "Land":
             if self.landDrop == True:
-                print("Already played a land this turn.")
+                # print("Already played a land this turn.")
                 return False
             else:
                 return True
@@ -439,7 +439,15 @@ class Game:
         return False
 
     def mainPhase(self):
-        c = ''
+
+        legalActions = self.getMainActions(activePlayer)
+        c = self.activePlayer.mainPhaseAction(legalActions)
+
+        if c == 'p':
+            self.printGameState()
+        elif c > 0:
+
+
 
         while c != 0:
             self.activePlayer.showHand()
