@@ -1,5 +1,6 @@
 import random
 import utils
+import copy as c
 
 class Player:
 
@@ -147,7 +148,7 @@ class Player:
 
         return False
 
-    def mainPhaseAction(self, legalActions):
+    def mainPhaseAction(self, legalActions, opp):
         c = ''
 
         while c != 0:
@@ -156,10 +157,69 @@ class Player:
             if c == 'p':
                 return c
             c = int(c)
-            if c > 0 and c <= len(self.activePlayer.hand):
-                return c
+            if c > 0 and c <= len(self.hand):
+                if self.canPlay(self.hand[c - 1]):
+                    return c
+                else:
+                    c = ''
 
         return 0
+
+    def canPlay(self, card, oppCreatures):
+
+        if card.ctype == "Land":
+            if self.landDrop == True:
+                # print("Already played a land this turn.")
+                return False
+            else:
+                return True
+
+        if card.cmc() <= player.untappedLands:
+            if card.ctype == "Sorcery":
+                if not self.canTarget(player, card.targets, oppCreatures):
+                    print("No valid targets.")
+                    return False
+                return True
+            else:
+                return True
+
+        print("Not enough untapped lands.")
+        return False
+
+    def canTarget(self, targets, oppCreatures):
+
+        ownCreatures = c.copy(self.creatures)
+
+        opponentCreatures = c.copy(oppCreatures)
+        for creature in opponentCreatures:
+            if creature.hasHexproof():
+                opponentCreatures.remove(creature)
+
+        for target in targets:
+            foundTarget = False
+            if "Player" not in target and "Opponent" not in target:
+                for targetType in target:
+                    if foundTarget:
+                        break
+                    if targetType == "Creature":
+                        if len(ownCreatures) > 0:
+                            ownCreatures.pop()
+                            foundTarget = True
+                        elif len(opponentCreatures) > 0:
+                            opponentCreatures.pop()
+                            foundTarget = True
+                    elif targetType == "OwnCreature":
+                        if len(ownCreatures) > 0:
+                            ownCreatures.pop()
+                            foundTarget = True
+                    elif targetType == "OpponentCreature":
+                        if len(opponentCreatures) > 0:
+                            opponentCreatures.pop()
+                            foundTarget = True
+                if not foundTarget:
+                    return False
+
+        return True
 
 class MulliganAgent(Player):
 
@@ -176,6 +236,7 @@ class MulliganAgent(Player):
         self.graveyard = []
         self.untappedLands = 0
         self.landRewards = []
+        self.landDrop = False
 
         self.verbose = verbosity
         self.onThePlay = onThePlay

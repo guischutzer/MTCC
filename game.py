@@ -131,8 +131,6 @@ class Game:
 
             legalTargets.append(curList)
 
-        print(legalTargets)
-
         return legalTargets
 
     def chooseTargets(self, player, targets):
@@ -224,7 +222,7 @@ class Game:
         paidMana = 0
         player.hand.remove(card)
         if card.ctype == "Land":
-            self.landDrop = True
+            player.landDrop = True
             permanent = Land(card, player)
             player.lands.append(permanent)
             return permanent
@@ -264,9 +262,11 @@ class Game:
 
     def turnRoutine(self, tNumber):
 
-        self.landDrop = False
+
         activePlayer = self.activePlayer
         opponent = self.opponent
+
+        activePlayer.landDrop = False
 
         ## Beggining Phase
         # Untap - untap permanents of active player
@@ -437,6 +437,19 @@ class Game:
             activePlayer.discard(card)
 
         return False
+
+    def getMainActions(self):
+
+        legalActions = [['Pass']]
+
+        for card in self.activePlayer.hand:
+            if self.canPlay(activePlayer, card):
+                legalTargets = self.getLegalTargets(activePlayer, card)
+                targetCombinations = utils.listCombinations(legalTargets)
+                for combination in targetCombinations:
+                    legalActions += [[card] + combination]
+
+        return legalActions
 
     def mainPhase(self):
 
