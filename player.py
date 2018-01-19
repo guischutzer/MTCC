@@ -157,13 +157,12 @@ class Player:
             if c == 'p':
                 return 'Print'
             c = int(c)
-            print(legalActions)
             if c > 0 and c <= len(self.hand):
                 card = self.hand[c - 1]
                 if isLegalAction(card, legalActions):
                     legalTargets = card.legalTargets
                     targets = self.chooseTargets(legalTargets)
-                    return [card] + targets
+                    return [card] + [targets]
                 else:
                     if card.ctype is "Land":
                         print("Already played a land this turn.")
@@ -384,12 +383,15 @@ class RandomAgent(MulliganAgent):
         print("Agent " + self.name + " plays " + action[0].name, end='')
         if len(action[1:]) > 0:
             print(" targetting ", end='')
-            i = 2
-            for target in action[1:]:
-                print(target.name, end='')
-                if len(action[i:]) == 1:
+            targets = action[1]
+            for i in range(len(targets)):
+                if not isinstance(targets[i], Player):
+                    print(targets[i].card.name, end='')
+                else:
+                    print(targets[i].name, end='')
+                if len(targets[i+1:]) == 1:
                     print(" and ", end='')
-                elif len(action[i:]) > 1:
+                elif len(targets[i+1:]) > 1:
                     print(", ", end='')
         print(".")
         return action

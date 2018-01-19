@@ -22,7 +22,7 @@ class Game:
 
         if agent2 is None:
             self.player_2 = Player(2)
-        elif agent2 is "random" or agent2 is "Random":
+        elif agent2 == "random" or agent2 == "Random":
             self.player_2 = RandomAgent(2, actPlayerID is 2, verbosity)
         else:
             self.player_2 = MulliganAgent(2, actPlayerID is 2, verbosity)
@@ -105,6 +105,8 @@ class Game:
 
         opponent = self.opponentOf(player)
         ownCreatures = copy(player.creatures)
+        if card.ctype == 'Creature':
+            ownCreatures.append(Creature(card, player))
 
         opponentCreatures = copy(opponent.creatures)
         for creature in opponentCreatures:
@@ -112,7 +114,6 @@ class Game:
                 opponentCreatures.remove(creature)
 
         for possibleTarget in card.targets:
-            print(possibleTarget)
             curList = []
             if "OwnCreature" in possibleTarget:
                 for creature in ownCreatures:
@@ -134,56 +135,6 @@ class Game:
         card.setLegalTargets(legalTargets)
         return legalTargets
 
-    def chooseTargets(self, player, targets):
-        chosenTargets = []
-
-        opponent = self.opponentOf(player)
-        ownCreatures = copy(player.creatures)
-
-        opponentCreatures = copy(opponent.creatures)
-        for creature in opponentCreatures:
-            if creature.hasHexproof():
-                opponentCreatures.remove(creature)
-
-        targetNumber = 1
-        for targetType in targets:
-            print("Possible targets for the target number " + str(targetNumber) + ":")
-            optionNumber = 1
-            curList = []
-            if "OwnCreature" in targetType:
-                for creature in ownCreatures:
-                    curList.append(creature)
-                    print(str(optionNumber) + ") " + creature.stats())
-                    optionNumber += 1
-            if "OpponentCreature" in targetType:
-                for creature in opponentCreatures:
-                    curList.append(creature)
-                    print(str(optionNumber) + ") " + creature.stats())
-                    optionNumber += 1
-            if "Player" in targetType:
-                curList.append(player)
-                print(str(optionNumber) + ") You")
-                optionNumber += 1
-                curList.append(opponent)
-                print(str(optionNumber) + ") Opponent")
-                optionNumber += 1
-            if "Opponent" in targetType:
-                curList.append(opponent)
-                print(str(optionNumber) + ") Opponent")
-                optionNumber += 1
-            c = 0
-            while c < 1 or c > len(curList):
-                c = int(input("Choose a target: "))
-            chosenTarget = curList[c - 1]
-            chosenTargets.append(chosenTarget)
-            if not chosenTarget.isPlayer():
-                if chosenTarget.getController() == player:
-                    ownCreatures.remove(chosenTarget)
-                else:
-                    opponentCreatures.remove(chosenTarget)
-
-        return chosenTargets
-
     def canPlay(self, player, card):
 
         if card.ctype == "Land":
@@ -204,8 +155,8 @@ class Game:
 
     def checkSBA(self):
         for player in self.activePlayer, self.opponent:
-            if player.lose:
-                print("Player " + player.number + " has lost the game.")
+            if player.lose or player.life <= 0:
+                print("Player " + player.name + " has lost the game.")
                 return True
 
             for creature in player.creatures:
@@ -218,7 +169,10 @@ class Game:
     def play(self, action):
 
         card = action[0]
-        targets = action[1:]
+        targets = []
+        if len(action) > 1:
+            targets = action[1]
+
         player = self.activePlayer
 
         paidMana = 0
@@ -238,10 +192,12 @@ class Game:
         if card.ctype == "Creature":
             permanent = Creature(card, player)
             player.creatures.append(permanent)
+            for target in targets:
+                for i in range(len(targets)):
+                    if targets[i] not in player.creatures:
+                        targets[i] = permanent
+                        break
             card.effect(targets)
-            # if self.canTarget(player, card.targets):
-            #     legalTargets = self.findLegalTargets(player, card)
-            #     card.effect(player.chooseTargets(legalTargets))
             return permanent
 
         if card.ctype == "Sorcery":
@@ -250,6 +206,7 @@ class Game:
             return None
 
     def printGameState(self):
+        print("")
         print("Active Player: " + self.activePlayer.name + " - " + str(self.activePlayer.life) + " life")
         for land in self.activePlayer.lands:
             print(land.stats())
@@ -314,6 +271,7 @@ class Game:
         for creature in activePlayer.creatures:
             if creature.canAttack():
                 c = input("Declare " + creature.card.name + " as an attacker? (y/N) ")
+                c = "y"
                 if utils.confirm(c):
                     creature.attack()
                     combatPairings[creature] = []
@@ -422,6 +380,8 @@ class Game:
         if self.mainPhase():
             return True
 
+        self.printGameState()
+
         ## End Phase
         print("----------------------------------------------------------")
         print("End Phase")
@@ -475,26 +435,6 @@ class Game:
                     return True
 
         return False
-
-        # while c != 0:
-        #     self.activePlayer.showHand()
-        #     c = input("Choose a card from your hand (0 will pass priority, 'p' prints the game state): ")
-        #     if c == 'p':
-        #         c = -1
-        #         self.printGameState()
-        #     c = int(c)
-        #     if c > 0 and c <= len(self.activePlayer.hand):
-        #         card = self.activePlayer.hand[c - 1]
-        #         print("\n" + str(card))
-        #         if self.canPlay(self.activePlayer, card):
-        #             self.play(self.activePlayer, card)
-        #         else:
-        #             c = ''
-        #
-        #     if self.checkSBA():
-        #         return True
-        #
-        # return False
 
     def readDeck(self, filename, owner):
 

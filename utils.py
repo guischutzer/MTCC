@@ -27,7 +27,6 @@ def listCombinations(lst):
 
     finalLists = []
     for item in top:
-        print(top)
         lists = recursiveListCombination(lst[:-1])
         for l in lists:
             l += [item]
