@@ -16,6 +16,7 @@ class Player:
         self.active = False
         self.graveyard = []
         self.untappedLands = 0
+        self.landDrop = False
 
     def rename(self, name):
         self.name = name
@@ -156,6 +157,7 @@ class Player:
             if c == 'p':
                 return 'Print'
             c = int(c)
+            print(legalActions)
             if c > 0 and c <= len(self.hand):
                 card = self.hand[c - 1]
                 if isLegalAction(card, legalActions):
@@ -165,7 +167,7 @@ class Player:
                 else:
                     if card.ctype is "Land":
                         print("Already played a land this turn.")
-                    elif card.cmc > self.untappedLands:
+                    elif card.cmc() > self.untappedLands:
                         print("Not enough untapped lands.")
                     else:
                         print("There are no valid targets.")
@@ -374,8 +376,12 @@ class MulliganAgent(Player):
 class RandomAgent(MulliganAgent):
 
     def mainPhaseAction(self, legalActions):
-        action = random.randrange(0, len(legalActions))
-        print("Agent " + self.name + " plays " + action[0], end='')
+        index = random.randrange(0, len(legalActions))
+        action = legalActions[index]
+        if action[0] is 'Pass':
+            print("Agent " + self.name + " passes priority.")
+            return action[0]
+        print("Agent " + self.name + " plays " + action[0].name, end='')
         if len(action[1:]) > 0:
             print(" targetting ", end='')
             i = 2

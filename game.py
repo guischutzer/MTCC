@@ -15,7 +15,7 @@ class Game:
 
         if agent1 is None:
             self.player_1 = Player(1)
-        elif agent1 is "random" or agent1 is "Random":
+        elif agent1 == "random" or agent1 == "Random":
             self.player_1 = RandomAgent(1, actPlayerID is 1, verbosity)
         else:
             self.player_1 = MulliganAgent(1, actPlayerID is 1, verbosity)
@@ -187,8 +187,7 @@ class Game:
     def canPlay(self, player, card):
 
         if card.ctype == "Land":
-            if self.landDrop == True:
-                # print("Already played a land this turn.")
+            if self.activePlayer.landDrop == True:
                 return False
             else:
                 return True
@@ -196,13 +195,11 @@ class Game:
         if card.cmc() <= player.untappedLands:
             if card.ctype == "Sorcery":
                 if not self.canTarget(player, card.targets):
-                    print("No valid targets.")
                     return False
                 return True
             else:
                 return True
 
-        print("Not enough untapped lands.")
         return False
 
     def checkSBA(self):
@@ -218,9 +215,15 @@ class Game:
 
         return False
 
-    def play(self, player, card):
+    def play(self, action):
+
+        card = action[0]
+        targets = action[1:]
+        player = self.activePlayer
+
         paidMana = 0
         player.hand.remove(card)
+
         if card.ctype == "Land":
             player.landDrop = True
             permanent = Land(card, player)
@@ -231,17 +234,18 @@ class Game:
             if not land.isTapped() and paidMana < card.cmc():
                 land.tap()
                 paidMana += 1
+
         if card.ctype == "Creature":
             permanent = Creature(card, player)
             player.creatures.append(permanent)
-            if self.canTarget(player, card.targets):
-                legalTargets = self.findLegalTargets(player, card)
-                card.effect(player.chooseTargets(legalTargets))
+            card.effect(targets)
+            # if self.canTarget(player, card.targets):
+            #     legalTargets = self.findLegalTargets(player, card)
+            #     card.effect(player.chooseTargets(legalTargets))
             return permanent
 
         if card.ctype == "Sorcery":
-            legalTargets = self.findLegalTargets(player, card.targets)
-            card.effect(player.chooseTargets(legalTargets))
+            card.effect(targets)
             player.graveyard.append(card)
             return None
 
@@ -261,7 +265,6 @@ class Game:
         print("\n")
 
     def turnRoutine(self, tNumber):
-
 
         activePlayer = self.activePlayer
         opponent = self.opponent
@@ -416,7 +419,8 @@ class Game:
         print("Postcombat Main Phase")
         print("----------------------------------------------------------")
 
-        self.mainPhase()
+        if self.mainPhase():
+            return True
 
         ## End Phase
         print("----------------------------------------------------------")
@@ -441,13 +445,16 @@ class Game:
     def getMainActions(self):
 
         legalActions = [['Pass']]
+        player = self.activePlayer
 
-        for card in self.activePlayer.hand:
-            if self.canPlay(activePlayer, card):
-                legalTargets = self.findLegalTargets(activePlayer, card)
+        for card in player.hand:
+            if self.canPlay(player, card):
+                legalTargets = self.findLegalTargets(player, card)
                 targetCombinations = utils.listCombinations(legalTargets)
+                action = [card]
                 for combination in targetCombinations:
-                    legalActions += [[card] + combination]
+                    action += [combination]
+                legalActions += [action]
 
         return legalActions
 
@@ -455,15 +462,15 @@ class Game:
 
         action = ''
 
-        while action not 'Pass':
-            legalActions = self.getMainActions(activePlayer)
+        while action != 'Pass':
+            legalActions = self.getMainActions()
             action = self.activePlayer.mainPhaseAction(legalActions)
 
-            if action is 'Print':
+            if action == 'Print':
                 self.printGameState()
 
-            if action[0] isinstance(Card):
-                self.play(self.activePlayer, action)
+            if isinstance(action[0], Card):
+                self.play(action)
                 if self.checkSBA():
                     return True
 
@@ -488,7 +495,6 @@ class Game:
         #         return True
         #
         # return False
-
 
     def readDeck(self, filename, owner):
 
