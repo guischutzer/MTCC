@@ -124,7 +124,6 @@ class Player:
         else:
             self.library.append(card)
 
-
     def mulligan(self):
 
         n = len(self.hand)
@@ -148,43 +147,31 @@ class Player:
 
         return False
 
-    def mainPhaseAction(self, legalActions, opp):
+    def mainPhaseAction(self, legalActions):
         c = ''
 
         while c != 0:
             self.showHand()
             c = input("Choose a card from your hand (0 will pass priority, 'p' prints the game state): ")
             if c == 'p':
-                return c
+                return 'Print'
             c = int(c)
             if c > 0 and c <= len(self.hand):
-                if self.canPlay(self.hand[c - 1]):
-                    return c
+                card = self.hand[c - 1]
+                if isLegalAction(card, legalActions):
+                    legalTargets = card.legalTargets
+                    targets = self.chooseTargets(legalTargets)
+                    return [card] + targets
                 else:
+                    if card.ctype is "Land":
+                        print("Already played a land this turn.")
+                    elif card.cmc > self.untappedLands:
+                        print("Not enough untapped lands.")
+                    else:
+                        print("There are no valid targets.")
                     c = ''
 
-        return 0
-
-    def canPlay(self, card, oppCreatures):
-
-        if card.ctype == "Land":
-            if self.landDrop == True:
-                # print("Already played a land this turn.")
-                return False
-            else:
-                return True
-
-        if card.cmc() <= player.untappedLands:
-            if card.ctype == "Sorcery":
-                if not self.canTarget(player, card.targets, oppCreatures):
-                    print("No valid targets.")
-                    return False
-                return True
-            else:
-                return True
-
-        print("Not enough untapped lands.")
-        return False
+        return 'Pass'
 
     def canTarget(self, targets, oppCreatures):
 
@@ -386,22 +373,24 @@ class MulliganAgent(Player):
 
 class RandomAgent(MulliganAgent):
 
-    def mainPhase(self):
+    def mainPhaseAction(self, legalActions):
+        action = random.randrange(0, len(legalActions))
+        print("Agent " + self.name + " plays " + action[0], end='')
+        if len(action[1:]) > 0:
+            print(" targetting ", end='')
+            i = 2
+            for target in action[1:]:
+                print(target.name, end='')
+                if len(action[i:]) == 1:
+                    print(" and ", end='')
+                elif len(action[i:]) > 1:
+                    print(", ", end='')
+        print(".")
+        return action
 
-    def chooseAction(self, legalActions):
+def isLegalAction(card, legalActions):
+    for action in legalActions:
+        if action[0] is card:
+            return True
 
-        return random.randrange(0, len(legalActions))
-
-    def chooseTargets(self, legalTargets):
-
-        chosenTargets = []
-
-        targetNumber = 1
-        for target in legalTargets:
-            index = random.randrange(0, len(target))
-            chosenTarget = target[index]
-            chosenTargets.append(chosenTarget)
-            print("Agent " + self.name + " has chosen " + chosenTarget.name + " as target number " + targetNumber + ".")
-            targetNumber += 1
-
-        return chosenTargets
+    return False

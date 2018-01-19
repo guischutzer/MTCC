@@ -99,7 +99,7 @@ class Game:
 
         return True
 
-    def getLegalTargets(self, player, card):
+    def findLegalTargets(self, player, card):
 
         legalTargets = []
 
@@ -131,6 +131,7 @@ class Game:
 
             legalTargets.append(curList)
 
+        card.setLegalTargets(legalTargets)
         return legalTargets
 
     def chooseTargets(self, player, targets):
@@ -183,7 +184,6 @@ class Game:
 
         return chosenTargets
 
-
     def canPlay(self, player, card):
 
         if card.ctype == "Land":
@@ -235,12 +235,12 @@ class Game:
             permanent = Creature(card, player)
             player.creatures.append(permanent)
             if self.canTarget(player, card.targets):
-                legalTargets = self.getLegalTargets(player, card)
+                legalTargets = self.findLegalTargets(player, card)
                 card.effect(player.chooseTargets(legalTargets))
             return permanent
 
         if card.ctype == "Sorcery":
-            legalTargets = self.getLegalTargets(player, card.targets)
+            legalTargets = self.findLegalTargets(player, card.targets)
             card.effect(player.chooseTargets(legalTargets))
             player.graveyard.append(card)
             return None
@@ -444,7 +444,7 @@ class Game:
 
         for card in self.activePlayer.hand:
             if self.canPlay(activePlayer, card):
-                legalTargets = self.getLegalTargets(activePlayer, card)
+                legalTargets = self.findLegalTargets(activePlayer, card)
                 targetCombinations = utils.listCombinations(legalTargets)
                 for combination in targetCombinations:
                     legalActions += [[card] + combination]
@@ -453,34 +453,41 @@ class Game:
 
     def mainPhase(self):
 
-        legalActions = self.getMainActions(activePlayer)
-        c = self.activePlayer.mainPhaseAction(legalActions)
+        action = ''
 
-        if c == 'p':
-            self.printGameState()
-        elif c > 0:
+        while action not 'Pass':
+            legalActions = self.getMainActions(activePlayer)
+            action = self.activePlayer.mainPhaseAction(legalActions)
 
-
-
-        while c != 0:
-            self.activePlayer.showHand()
-            c = input("Choose a card from your hand (0 will pass priority, 'p' prints the game state): ")
-            if c == 'p':
-                c = -1
+            if action is 'Print':
                 self.printGameState()
-            c = int(c)
-            if c > 0 and c <= len(self.activePlayer.hand):
-                card = self.activePlayer.hand[c - 1]
-                print("\n" + str(card))
-                if self.canPlay(self.activePlayer, card):
-                    self.play(self.activePlayer, card)
-                else:
-                    c = ''
 
-            if self.checkSBA():
-                return True
+            if action[0] isinstance(Card):
+                self.play(self.activePlayer, action)
+                if self.checkSBA():
+                    return True
 
         return False
+
+        # while c != 0:
+        #     self.activePlayer.showHand()
+        #     c = input("Choose a card from your hand (0 will pass priority, 'p' prints the game state): ")
+        #     if c == 'p':
+        #         c = -1
+        #         self.printGameState()
+        #     c = int(c)
+        #     if c > 0 and c <= len(self.activePlayer.hand):
+        #         card = self.activePlayer.hand[c - 1]
+        #         print("\n" + str(card))
+        #         if self.canPlay(self.activePlayer, card):
+        #             self.play(self.activePlayer, card)
+        #         else:
+        #             c = ''
+        #
+        #     if self.checkSBA():
+        #         return True
+        #
+        # return False
 
 
     def readDeck(self, filename, owner):
