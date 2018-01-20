@@ -114,7 +114,8 @@ class Game:
         print("----------------------------------------------------------")
 
         # Main Phase method
-        self.mainPhase()
+        if self.mainPhase():
+            return True
 
         ## Combat Phase
 
