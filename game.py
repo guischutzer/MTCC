@@ -265,19 +265,31 @@ class Game:
         print("Combat Phase")
         print("----------------------------------------------------------")
 
+
         # Declare Attackers - Active Player
-        print(activePlayer.name + ", declare attackers:")
+        legalActions = self.getAttackingActions()
+        attackers = activePlayer.declareAttackers(legalActions)
+
         combatPairings = {}
-        for creature in activePlayer.creatures:
-            if creature.canAttack():
-                c = input("Declare " + creature.card.name + " as an attacker? (y/N) ")
-                c = "y"
-                if utils.confirm(c):
-                    creature.attack()
-                    combatPairings[creature] = []
+        for creature in attackers:
+            creature.attack()
+            combatPairings[creature] = []
+
+        # print(activePlayer.name + ", declare attackers:")
+        # combatPairings = {}
+        # for creature in activePlayer.creatures:
+        #     if creature.canAttack():
+        #         c = input("Declare " + creature.card.name + " as an attacker? (y/N) ")
+        #         if utils.confirm(c):
+        #             creature.attack()
+        #             combatPairings[creature] = []
 
 
         # Declare Blockers - Not Active Player
+        # Declare Attackers - Active Player
+        legalActions = self.getBlockingActions(attackers)
+        # blockers = opponent.declareBlockers(legalActions)
+
         print(opponent.name + ", declare blockers: ")
         for attacker in combatPairings:
             for creature in opponent.creatures:
@@ -417,6 +429,31 @@ class Game:
                 legalActions += [action]
 
         return legalActions
+
+    def getAttackingActions(self):
+
+        player = self.activePlayer
+
+        possibleAttackers = [creature for creature in player.creatures if creature.canAttack()]
+        return utils.listArrangements(possibleAttackers)
+
+    def getBlockingActions(self, attackers):
+
+        player = self.opponent
+
+        possibleBlocksList = []
+        for creature in player.creatures:
+            possibleBlocks = [[]]
+            for attacker in attackers:
+                if creature.canBlock(attacker):
+                    possibleBlocks.append(attacker)
+            possibleBlocksList.append(possibleBlocks)
+
+        print(possibleBlocksList)
+        print()
+        print(utils.listCombinations(possibleBlocksList))
+
+        return utils.listCombinations(possibleBlocksList)
 
     def mainPhase(self):
 

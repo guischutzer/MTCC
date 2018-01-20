@@ -174,6 +174,18 @@ class Player:
 
         return 'Pass'
 
+    def declareAttackers(self, legalActions):
+
+        attackers = []
+        print(self.name + ", declare attackers:")
+        for creature in self.creatures:
+            if creature.canAttack():
+                c = input("Declare " + creature.card.name + " as an attacker? (y/N) ")
+                if utils.confirm(c):
+                    attackers.append(creature)
+
+        return attackers
+
     def canTarget(self, targets, oppCreatures):
 
         ownCreatures = c.copy(self.creatures)
