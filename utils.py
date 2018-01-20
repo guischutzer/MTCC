@@ -51,5 +51,8 @@ def listArrangements(lst):
         finalLists.append([] + item)
     return finalLists
 
+def getOrdinal(number):
+    return ordinals[number]
 
+ordinals = ['zeroth', 'first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth']
 colors = ['W', 'U', 'B', 'R', 'G']

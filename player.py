@@ -186,6 +186,53 @@ class Player:
 
         return attackers
 
+    def assignBlockOrder(self, combatPairings):
+
+        for attacker in combatPairings:
+            n = len(combatPairings[attacker])
+            if n > 1:
+                print("Declare block order for " + attacker.stats())
+                auxList = []
+                for blocker in combatPairings[attacker]:
+                    auxList.append(blocker)
+                i = 1
+                combatPairings[attacker] = []
+                while len(combatPairings[attacker]) < n - 1:
+                    for j in range(len(auxList)):
+                        print(str(j + 1) + ") " + auxList[j].stats())
+                    c = 0
+                    while int(c - 1) > len(auxlist) or int(c - 1) < 0:
+                        c = input("Choose " + utils.getOrdinal(i) + " creature to assign damage: ")
+                    creature = auxList[c - 1]
+                    auxList.remove(creature)
+                    combatPairings[attacker].append(creature)
+                    i += 1
+                combatPairings[attacker].append(auxList[0])
+
+        return combatPairings
+
+
+    def declareBlockers(self, legalActions, combatPairings):
+
+        print(self.name + ", declare blockers: ")
+        for attacker in combatPairings:
+            for creature in self.creatures:
+                if creature.canBlock(attacker):
+                    c = input("Block " + attacker.card.name + " with " + creature.card.name + "? (y/N) ")
+                    if utils.confirm(c):
+                        creature.block(attacker)
+                        combatPairings[attacker].append(creature)
+
+        return combatPairings
+
+    def discardExcess(self):
+        self.showHand()
+        c = 0
+        while c < 1 or c > self.cardsInHand():
+            c = int(input("Choose a card from your hand to discard: "))
+        card = self.hand[c - 1]
+        self.discard(card)
+
     def canTarget(self, targets, oppCreatures):
 
         ownCreatures = c.copy(self.creatures)
@@ -407,6 +454,70 @@ class RandomAgent(MulliganAgent):
                     print(", ", end='')
         print(".")
         return action
+
+    def declareAttackers(self, legalActions):
+
+        if len(legalActions) == 0:
+            return []
+
+        index = random.randrange(0, len(legalActions))
+        attackers = legalActions[index]
+
+        if attackers == []:
+            print("Agent " + self.name + " has declared no attacking creatures.")
+            return attackers
+
+        print("Agent " + self.name + " has declared:")
+        for creature in attackers:
+            print(creature.stats())
+        print("as attacker(s).")
+        return attackers
+
+    def assignBlockOrder(self, combatPairings):
+
+        for attacker in combatPairings:
+            n = len(combatPairings[attacker])
+            if n > 1:
+                random.shuffle(combatPairings[attacker])
+                print("Agent " + self.name + " blocks " + attacker.stats())
+                i = 1
+                for blocker in combatPairings[attacker]:
+                    print(" - " + utils.getOrdinal(i) + " with " + blocker.stats())
+                    i += 1
+
+        return combatPairings
+
+    def declareBlockers(self, legalActions, combatPairings):
+
+        if len(legalActions) == 0:
+            return {}
+
+        index = random.randrange(0, len(legalActions))
+        action = legalActions[index]
+
+        noBlocks = True
+        print("Agent " + self.name + " has declared ", end='')
+        for i in range(len(self.creatures)):
+            blockingCreature = self.creatures[i]
+            blockedCreature = action[i]
+            if blockedCreature != []:
+                noBlocks = False
+                print("")
+                print(" - " + blockingCreature.stats() + " blocking " + blockedCreature.stats(), end='')
+                combatPairings[blockedCreature].append(blockingCreature)
+
+        if noBlocks:
+            print(" no blockers.")
+        else:
+            print("")
+        return combatPairings
+
+    def discardExcess(self):
+
+        while self.cardsInHand() > 7:
+            index = random.randrange(0, self.cardsInHand())
+            self.discard(hand[index])
+
 
 def isLegalAction(card, legalActions):
     for action in legalActions:

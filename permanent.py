@@ -159,4 +159,4 @@ class Creature(Permanent):
         virado = 'U'
         if self.tapped:
             virado = 'T'
-        return self.card.name + " " + virado + " " + str(self.curPower) + "/" + str(self.curTou) + "(" + str(self.damage) + ")"
+        return self.card.name + " " + virado + " " + str(self.curPower) + "/" + str(self.curTou) + " (" + str(self.damage) + ")"

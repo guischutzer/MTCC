@@ -27,10 +27,10 @@ class Game:
         else:
             self.player_2 = MulliganAgent(2, actPlayerID is 2, verbosity)
 
-        name = input("Choose a name for Player 1: ")
-        self.player_1.rename(name)
-        name = input("Choose a name for Player 2: ")
-        self.player_2.rename(name)
+        # name = input("Choose a name for Player 1: ")
+        self.player_1.rename("Red")
+        # name = input("Choose a name for Player 2: ")
+        self.player_2.rename("White")
 
         self.readDeck(deck1, self.player_1)
         self.readDeck(deck2, self.player_2)
@@ -288,34 +288,36 @@ class Game:
         # Declare Blockers - Not Active Player
         # Declare Attackers - Active Player
         legalActions = self.getBlockingActions(attackers)
-        # blockers = opponent.declareBlockers(legalActions)
+        combatPairings = opponent.declareBlockers(legalActions, combatPairings)
 
-        print(opponent.name + ", declare blockers: ")
-        for attacker in combatPairings:
-            for creature in opponent.creatures:
-                if creature.canBlock(attacker):
-                    c = input("Block " + attacker.card.name + " with " + creature.card.name + "? (y/N) ")
-                    if utils.confirm(c):
-                        creature.block(attacker)
-                        combatPairings[attacker].append(creature)
+        # print(opponent.name + ", declare blockers: ")
+        # for attacker in combatPairings:
+        #     for creature in opponent.creatures:
+        #         if creature.canBlock(attacker):
+        #             c = input("Block " + attacker.card.name + " with " + creature.card.name + "? (y/N) ")
+        #             if utils.confirm(c):
+        #                 creature.block(attacker)
+        #                 combatPairings[attacker].append(creature)
 
-        ## Choosing Block Order - Not Active Player
-        for attacker in combatPairings:
-            if len(combatPairings[attacker]) > 1:
-                print("Blocking " + attacker.stats() + ": ")
-                i = 1
-                auxList = []
-                for blocker in combatPairings[attacker]:
-                    print(str(i) + ") " + blocker.stats())
-                    auxList.append("")
-                    i + 1
-                order = input("Desired order (numbers with commas): ")
-                order.split(" ")
-                i = 0
-                for number in order:
-                    auxList[n] = combatPairings[attacker][int(number) - 1]
-                    i += 1
-                combatPairings[attacker] = auxList
+        ## Choosing Block Order - Active Player
+        combatPairings = activePlayer.assignBlockOrder(combatPairings)
+
+        # for attacker in combatPairings:
+        #     if len(combatPairings[attacker]) > 1:
+        #         print("Blocking " + attacker.stats() + ": ")
+        #         i = 1
+        #         auxList = []
+        #         for blocker in combatPairings[attacker]:
+        #             print(str(i) + ") " + blocker.stats())
+        #             auxList.append(blocker)
+        #             i + 1
+        #         order = input("Desired order (numbers with commas): ")
+        #         order.split(" ")
+        #         i = 0
+        #         for number in order:
+        #             auxList[n] = combatPairings[attacker][int(number) - 1]
+        #             i += 1
+        #         combatPairings[attacker] = auxList
 
         # Combat Damage
         # - First & Double Strike Damage
@@ -404,13 +406,8 @@ class Game:
         for permanent in activePlayer.creatures:
             permanent.removeDamage()
             permanent.resetPTA()
-        while activePlayer.cardsInHand() > 7:
-            activePlayer.showHand()
-            c = 0
-            while c < 1 or c > activePlayer.cardsInHand():
-                c = int(input("Choose a card from your hand to discard: "))
-            card = activePlayer.hand[c - 1]
-            activePlayer.discard(card)
+        if activePlayer.cardsInHand() > 7:
+            activePlayer.discardExcess()
 
         return False
 
@@ -448,10 +445,6 @@ class Game:
                 if creature.canBlock(attacker):
                     possibleBlocks.append(attacker)
             possibleBlocksList.append(possibleBlocks)
-
-        print(possibleBlocksList)
-        print()
-        print(utils.listCombinations(possibleBlocksList))
 
         return utils.listCombinations(possibleBlocksList)
 
