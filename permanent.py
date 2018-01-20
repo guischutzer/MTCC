@@ -15,6 +15,10 @@ class Permanent:
         self.controller = player
         self.tapped = False
         self.sick = False
+        self.destroyed = False
+
+    def destroy(self):
+        self.destroyed = True
 
     def putOnGraveyard(self):
         self.owner.graveyard.append(self.card)

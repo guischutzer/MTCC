@@ -44,6 +44,7 @@ class Player:
     def discard(self, card):
         self.hand.remove(card)
         self.graveyard.append(card)
+        print("Player " + self.name + " has discarded " + card.name + ".")
 
     def shuffle(self):
         random.shuffle(self.library)
@@ -458,6 +459,7 @@ class RandomAgent(MulliganAgent):
     def declareAttackers(self, legalActions):
 
         if len(legalActions) == 0:
+            print("Agent " + self.name + " has declared no attacking creatures.")
             return []
 
         index = random.randrange(0, len(legalActions))
@@ -469,7 +471,7 @@ class RandomAgent(MulliganAgent):
 
         print("Agent " + self.name + " has declared:")
         for creature in attackers:
-            print(creature.stats())
+            print(" - " + creature.stats())
         print("as attacker(s).")
         return attackers
 
@@ -516,7 +518,7 @@ class RandomAgent(MulliganAgent):
 
         while self.cardsInHand() > 7:
             index = random.randrange(0, self.cardsInHand())
-            self.discard(hand[index])
+            self.discard(self.hand[index])
 
 
 def isLegalAction(card, legalActions):

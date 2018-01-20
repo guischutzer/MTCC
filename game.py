@@ -160,9 +160,14 @@ class Game:
                 return True
 
             for creature in player.creatures:
-                if creature.dealtLethal:
+                if creature.dealtLethal or creature.destroyed:
                     player.creatures.remove(creature)
                     creature.putOnGraveyard()
+
+            for land in player.lands:
+                if land.destroyed:
+                    player.lands.remove(land)
+                    land.putOnGraveyard()
 
         return False
 
@@ -206,7 +211,6 @@ class Game:
             return None
 
     def printGameState(self):
-        print("")
         print("Active Player: " + self.activePlayer.name + " - " + str(self.activePlayer.life) + " life")
         for land in self.activePlayer.lands:
             print(land.stats())
@@ -219,7 +223,6 @@ class Game:
         for creature in self.opponent.creatures:
             print(creature.stats())
 
-        print("\n")
 
     def turnRoutine(self, tNumber):
 
@@ -275,49 +278,13 @@ class Game:
             creature.attack()
             combatPairings[creature] = []
 
-        # print(activePlayer.name + ", declare attackers:")
-        # combatPairings = {}
-        # for creature in activePlayer.creatures:
-        #     if creature.canAttack():
-        #         c = input("Declare " + creature.card.name + " as an attacker? (y/N) ")
-        #         if utils.confirm(c):
-        #             creature.attack()
-        #             combatPairings[creature] = []
-
-
         # Declare Blockers - Not Active Player
         # Declare Attackers - Active Player
         legalActions = self.getBlockingActions(attackers)
         combatPairings = opponent.declareBlockers(legalActions, combatPairings)
 
-        # print(opponent.name + ", declare blockers: ")
-        # for attacker in combatPairings:
-        #     for creature in opponent.creatures:
-        #         if creature.canBlock(attacker):
-        #             c = input("Block " + attacker.card.name + " with " + creature.card.name + "? (y/N) ")
-        #             if utils.confirm(c):
-        #                 creature.block(attacker)
-        #                 combatPairings[attacker].append(creature)
-
         ## Choosing Block Order - Active Player
         combatPairings = activePlayer.assignBlockOrder(combatPairings)
-
-        # for attacker in combatPairings:
-        #     if len(combatPairings[attacker]) > 1:
-        #         print("Blocking " + attacker.stats() + ": ")
-        #         i = 1
-        #         auxList = []
-        #         for blocker in combatPairings[attacker]:
-        #             print(str(i) + ") " + blocker.stats())
-        #             auxList.append(blocker)
-        #             i + 1
-        #         order = input("Desired order (numbers with commas): ")
-        #         order.split(" ")
-        #         i = 0
-        #         for number in order:
-        #             auxList[n] = combatPairings[attacker][int(number) - 1]
-        #             i += 1
-        #         combatPairings[attacker] = auxList
 
         # Combat Damage
         # - First & Double Strike Damage
@@ -352,8 +319,6 @@ class Game:
         # - Combat Damage
 
         for attacker in combatPairings:
-
-            print(combatPairings[attacker])
 
             if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
                 remainingDamage = attacker.curPower
@@ -394,13 +359,13 @@ class Game:
         if self.mainPhase():
             return True
 
-        self.printGameState()
-
         ## End Phase
         print("----------------------------------------------------------")
         print("End Phase")
         print("----------------------------------------------------------")
         # End
+
+        self.printGameState()
 
         # Cleanup
         for permanent in activePlayer.creatures:
@@ -408,6 +373,8 @@ class Game:
             permanent.resetPTA()
         if activePlayer.cardsInHand() > 7:
             activePlayer.discardExcess()
+
+        print("")
 
         return False
 

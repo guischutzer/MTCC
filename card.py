@@ -167,8 +167,8 @@ class LightningHounds(Card):
         self.supertype = ""
         self.ctype = "Creature"
         self.subtype = "Hound"
-        self.text = "First strike. 3/2"
-        self.abilities = ["First strike"]
+        self.text = "First Strike. 3/2"
+        self.abilities = ["First Strike"]
         self.targets = []
         self.owner = owner
         self.power = 3
@@ -204,4 +204,4 @@ class PathofPeace(Card):
 
     def effect(self, targets):
         targets[0].owner.gainLife(4)
-        targets[0].putOnGraveyard()
+        targets[0].destroy()
