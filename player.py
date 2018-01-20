@@ -163,7 +163,10 @@ class Player:
                 if isLegalAction(card, legalActions):
                     legalTargets = card.legalTargets
                     targets = self.chooseTargets(legalTargets)
-                    return [card] + [targets]
+                    action = []
+                    action.append(card)
+                    action.append(targets)
+                    return action
                 else:
                     if card.ctype is "Land":
                         print("Already played a land this turn.")
@@ -438,12 +441,13 @@ class RandomAgent(MulliganAgent):
         index = random.randrange(0, len(legalActions))
         action = legalActions[index]
         if action[0] is 'Pass':
-            print("Agent " + self.name + " passes priority.")
+            print("Player " + self.name + " passes priority.")
             return action[0]
-        print("Agent " + self.name + " plays " + action[0].name, end='')
-        if len(action[1:]) > 0:
+        card = action[0]
+        targets = action[1]
+        print("Player " + self.name + " plays " + action[0].name, end='')
+        if len(targets) > 0:
             print(" targetting ", end='')
-            targets = action[1]
             for i in range(len(targets)):
                 if not isinstance(targets[i], Player):
                     print(targets[i].card.name, end='')
@@ -459,17 +463,17 @@ class RandomAgent(MulliganAgent):
     def declareAttackers(self, legalActions):
 
         if len(legalActions) == 0:
-            print("Agent " + self.name + " has declared no attacking creatures.")
+            print("Player " + self.name + " has declared no attacking creatures.")
             return []
 
         index = random.randrange(0, len(legalActions))
         attackers = legalActions[index]
 
         if attackers == []:
-            print("Agent " + self.name + " has declared no attacking creatures.")
+            print("Player " + self.name + " has declared no attacking creatures.")
             return attackers
 
-        print("Agent " + self.name + " has declared:")
+        print("Player " + self.name + " has declared:")
         for creature in attackers:
             print(" - " + creature.stats())
         print("as attacker(s).")
@@ -481,7 +485,7 @@ class RandomAgent(MulliganAgent):
             n = len(combatPairings[attacker])
             if n > 1:
                 random.shuffle(combatPairings[attacker])
-                print("Agent " + self.name + " blocks " + attacker.stats())
+                print("Player " + self.name + " blocks " + attacker.stats())
                 i = 1
                 for blocker in combatPairings[attacker]:
                     print(" - " + utils.getOrdinal(i) + " with " + blocker.stats())
@@ -498,7 +502,7 @@ class RandomAgent(MulliganAgent):
         action = legalActions[index]
 
         noBlocks = True
-        print("Agent " + self.name + " has declared ", end='')
+        print("Player " + self.name + " has declared ", end='')
         for i in range(len(self.creatures)):
             blockingCreature = self.creatures[i]
             blockedCreature = action[i]

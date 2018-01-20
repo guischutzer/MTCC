@@ -9,10 +9,16 @@ import re
 
 class Game:
 
-    def __init__(self, agent1, deck1, agent2, deck2, verbosity):
+    # A new game takes the following arguments:
+    # - agent1/agent2 is the type of each agent
+    # - deck1/deck2 are the deck files
+    # - verbosity prints extra data
+    # - choosename is used to input different names for the players
+    def __init__(self, agent1, deck1, agent2, deck2, verbosity, choosename):
 
         actPlayerID = random.randrange(1, 3)
 
+        # Players initialization
         if agent1 is None:
             self.player_1 = Player(1)
         elif agent1 == "random" or agent1 == "Random":
@@ -27,20 +33,23 @@ class Game:
         else:
             self.player_2 = MulliganAgent(2, actPlayerID is 2, verbosity)
 
-        # name = input("Choose a name for Player 1: ")
-        self.player_1.rename("Red")
-        # name = input("Choose a name for Player 2: ")
-        self.player_2.rename("White")
+        if choosename:
+            name1 = input("Choose a name for Player 1: ")
+            name2 = input("Choose a name for Player 2: ")
+        else:
+            name1 = "Red"
+            name2 = "White"
+
+        self.player_1.rename(name1)
+        self.player_2.rename(name2)
 
         self.readDeck(deck1, self.player_1)
         self.readDeck(deck2, self.player_2)
 
-        actPlayerID = random.randrange(1, 3)
         self.activePlayer = self.setActivePlayer(actPlayerID)
         self.opponent = self.opponentOf(self.activePlayer)
 
-        self.battlefield = []
-
+        # Each player shuffles its library and draws seven cards
         self.player_1.shuffle()
         self.player_2.shuffle()
         self.player_1.draw(7)
@@ -48,6 +57,7 @@ class Game:
 
         print("\nPlayer " + self.activePlayer.name + " starts the game.")
 
+        # Mulligan is done until both players have kept their hands
         p1keep = False
         p2keep = False
         while  not p1keep or not p2keep:
@@ -56,12 +66,242 @@ class Game:
             if not p2keep:
                 p2keep = self.opponent.mulligan()
 
+        # Proper game starts
         n = 0
-        endGame = False # flag for ending the game (name may change)
+        endGame = False # flag for ending the game
         while not endGame:
             n += 1
             endGame = self.turnRoutine(n)
             self.changeActivePlayer()
+
+    # turnRoutine(tNumber):
+    # calls the necessary methods in the correct order and deals
+    # with events like a normal Magic turn
+    def turnRoutine(self, tNumber):
+
+
+        activePlayer = self.activePlayer
+        opponent = self.opponent
+
+        activePlayer.landDrop = False
+
+        ## Beggining Phase
+        # Untap - untap permanents of active player
+        print("----------------------------------------------------------")
+        print("Turn " + str(tNumber) + " (" + activePlayer.name + ")")
+
+        for creature in activePlayer.creatures:
+            creature.untap()
+            creature.removeSickness()
+
+        for land in activePlayer.lands:
+            land.untap()
+            land.removeSickness()
+
+        # Upkeep
+        if self.checkSBA():
+            return True
+
+        # Draw
+        if tNumber > 1:
+            activePlayer.draw()
+        if self.checkSBA():
+            return True
+
+        ## Precombat Main Phase
+        print("----------------------------------------------------------")
+        print("Precombat Main Phase")
+        print("----------------------------------------------------------")
+
+        # Main Phase method
+        self.mainPhase()
+
+        ## Combat Phase
+
+        print("----------------------------------------------------------")
+        print("Combat Phase")
+        print("----------------------------------------------------------")
+
+        # Declare Attackers - Active Player
+
+        # Get all legal actions in the form of:
+        # [creature1 - attacking or not, creature2 - attacking or not, ...]
+        legalActions = self.getAttackingActions()
+        # Active player chooses how creatures attack
+        attackers = activePlayer.declareAttackers(legalActions)
+
+        # combatPairings pair attackers with their assigned blockers
+        combatPairings = {}
+        for creature in attackers:
+            creature.attack()
+            combatPairings[creature] = []
+
+        # Declare Blockers - Not Active Player
+
+        # Similarly, legal actions for blocking are all the
+        # arrangements possible for each of its creatures to block
+        # the opponent's attacking creatures. Each type of player/agent
+        # then chooses the action differently
+        legalActions = self.getBlockingActions(attackers)
+        combatPairings = opponent.declareBlockers(legalActions, combatPairings)
+
+        ## Choosing Block Order - Active Player
+        combatPairings = activePlayer.assignBlockOrder(combatPairings)
+
+        # Combat Damage
+        # - First & Double Strike Damage
+        # All the first-strikers and double-strikers deal first strike damage
+        for attacker in combatPairings:
+
+            if attacker.hasFirstStrike() or attacker.hasDoubleStrike():
+                remainingDamage = attacker.curPower
+
+                for blocker in combatPairings[attacker]:
+                    neededDamage = blocker.curTou - blocker.damage
+                    if attacker.hasDeathtouch():
+                        neededDamage = 1
+                    if remainingDamage > 0:
+                        if remainingDamage > neededDamage:
+                            attacker.dealDamage(blocker, neededDamage)
+                            remainingDamage -= neededDamage
+
+                if combatPairings[attacker] != [] and not attacker.hasTrample():
+                    attacker.dealDamage(blocker, remainingDamage)
+
+                else:
+                    attacker.dealDamage(opponent, remainingDamage)
+
+            for blocker in combatPairings[attacker]:
+                if blocker.hasFirstStrike() or blocker.hasDoubleStrike():
+                    blocker.dealDamage(attacker, blocker.curPower)
+
+        if self.checkSBA():
+            return True
+
+        # - Combat Damage
+        # All the double-strikers and not-first-strikers deal combat damage
+        for attacker in combatPairings:
+
+            if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
+                remainingDamage = attacker.curPower
+
+                for blocker in combatPairings[attacker]:
+                    neededDamage = blocker.curTou - blocker.damage
+                    if attacker.hasDeathtouch():
+                        neededDamage = 1
+                    if remainingDamage > 0:
+                        if remainingDamage > neededDamage:
+                            attacker.dealDamage(blocker, neededDamage)
+                            remainingDamage -= neededDamage
+
+                if combatPairings[attacker] != [] and not attacker.hasTrample():
+                    attacker.dealDamage(blocker, remainingDamage)
+
+                else:
+                    attacker.dealDamage(opponent, remainingDamage)
+
+            for blocker in combatPairings[attacker]:
+                if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
+                    blocker.dealDamage(attacker, blocker.curPower)
+
+        if self.checkSBA():
+            return True
+
+        # End of Combat
+        for attacker in combatPairings:
+            attacker.attacking = False
+            for blocker in combatPairings[attacker]:
+                blocker.blocking = False
+
+        ## Postcombat Main Phase
+        print("----------------------------------------------------------")
+        print("Postcombat Main Phase")
+        print("----------------------------------------------------------")
+
+        if self.mainPhase():
+            return True
+
+        ## End Phase
+        print("----------------------------------------------------------")
+        print("End Phase")
+        print("----------------------------------------------------------")
+        # End
+
+        # per default, we have a glimpse of the board state
+        # at the end of the turn
+        self.printGameState()
+
+        # Cleanup
+        for permanent in activePlayer.creatures:
+            permanent.removeDamage()
+            permanent.resetPTA()
+        if activePlayer.cardsInHand() > 7:
+            activePlayer.discardExcess()
+
+        print("")
+
+        return False
+
+    # Main phase method. Lets players play cards
+    def mainPhase(self):
+
+        action = ''
+
+        # Players can play cards until they decide to pass priority
+        while action != 'Pass':
+
+            # getMainActions() determine legal actions for the active player
+            legalActions = self.getMainActions()
+            # active player then chooses which action to perform
+            action = self.activePlayer.mainPhaseAction(legalActions)
+
+            # human player can choose to print game state
+            if action == 'Print':
+                self.printGameState()
+
+            # an action of playing a card is structured as following:
+            # [card, [target1, target2, ...]]
+            # since action is an element of legalActions, it can be played
+            if isinstance(action[0], Card):
+                self.play(action)
+                if self.checkSBA():
+                    return True
+
+        return False
+
+    # getMainActions() returns active players legal actions
+    # in any main phase. Actions can be
+    # - ['Pass'] to pass the turn
+    # - ['Print'] to print the board state
+    # - [card, targets] to play a card targetting a list of legalTargets
+    def getMainActions(self):
+
+        # every player always has the option to pass
+        legalActions = [['Pass']]
+        player = self.activePlayer
+
+        # each card in the active player's hand is a potential source of actions
+        for card in player.hand:
+            # if the card can be played, there is at least one legal action to play it
+            if self.canPlay(player, card):
+                # finds all the legal targets for each of the card's effects
+                legalTargets = self.findLegalTargets(player, card)
+                # returns every legal combination of targets
+                targetCombinations = utils.listCombinations(legalTargets)
+                action = [card]
+                targets = []
+                if targetCombinations == []:
+                    action += [targets]
+                    legalActions.append(action)
+                for targets in targetCombinations:
+                    action = [card, targets]
+                    legalActions.append(action)
+
+        # print("Legal actions:")
+        # for action in legalActions:
+        #     print(" - " + str(action))
+
+        return legalActions
 
     def canTarget(self, player, targets):
 
@@ -132,7 +372,6 @@ class Game:
 
             legalTargets.append(curList)
 
-        card.setLegalTargets(legalTargets)
         return legalTargets
 
     def canPlay(self, player, card):
@@ -174,11 +413,10 @@ class Game:
     def play(self, action):
 
         card = action[0]
-        targets = []
-        if len(action) > 1:
-            targets = action[1]
+        targets = action[1]
 
         player = self.activePlayer
+        opponent = self.opponent
 
         paidMana = 0
         player.hand.remove(card)
@@ -199,7 +437,7 @@ class Game:
             player.creatures.append(permanent)
             for target in targets:
                 for i in range(len(targets)):
-                    if targets[i] not in player.creatures:
+                    if targets[i] not in player.creatures + opponent.creatures:
                         targets[i] = permanent
                         break
             card.effect(targets)
@@ -223,177 +461,6 @@ class Game:
         for creature in self.opponent.creatures:
             print(creature.stats())
 
-
-    def turnRoutine(self, tNumber):
-
-        activePlayer = self.activePlayer
-        opponent = self.opponent
-
-        activePlayer.landDrop = False
-
-        ## Beggining Phase
-        # Untap - untap permanents of active player
-
-        print("----------------------------------------------------------")
-        print("Turn " + str(tNumber) + " (" + activePlayer.name + ")")
-
-        for creature in activePlayer.creatures:
-            creature.untap()
-            creature.removeSickness()
-
-        for land in activePlayer.lands:
-            land.untap()
-            land.removeSickness()
-
-        # Upkeep (not present in version alpha)
-        if self.checkSBA():
-            return True
-
-        # Draw
-        if tNumber > 1:
-            activePlayer.draw()
-        if self.checkSBA():
-            return True
-
-        ## Precombat Main Phase TODO: Show legal actions
-        print("----------------------------------------------------------")
-        print("Precombat Main Phase")
-        print("----------------------------------------------------------")
-
-        self.mainPhase()
-
-        ## Combat Phase
-
-        print("----------------------------------------------------------")
-        print("Combat Phase")
-        print("----------------------------------------------------------")
-
-
-        # Declare Attackers - Active Player
-        legalActions = self.getAttackingActions()
-        attackers = activePlayer.declareAttackers(legalActions)
-
-        combatPairings = {}
-        for creature in attackers:
-            creature.attack()
-            combatPairings[creature] = []
-
-        # Declare Blockers - Not Active Player
-        # Declare Attackers - Active Player
-        legalActions = self.getBlockingActions(attackers)
-        combatPairings = opponent.declareBlockers(legalActions, combatPairings)
-
-        ## Choosing Block Order - Active Player
-        combatPairings = activePlayer.assignBlockOrder(combatPairings)
-
-        # Combat Damage
-        # - First & Double Strike Damage
-        for attacker in combatPairings:
-
-            if attacker.hasFirstStrike() or attacker.hasDoubleStrike():
-                remainingDamage = attacker.curPower
-
-                for blocker in combatPairings[attacker]:
-                    neededDamage = blocker.curTou - blocker.damage
-                    if attacker.hasDeathtouch():
-                        neededDamage = 1
-                    if remainingDamage > 0:
-                        if remainingDamage > neededDamage:
-                            attacker.dealDamage(blocker, neededDamage)
-                            remainingDamage -= neededDamage
-
-                if combatPairings[attacker] != [] and not attacker.hasTrample():
-                    attacker.dealDamage(blocker, remainingDamage)
-
-                else:
-                    attacker.dealDamage(opponent, remainingDamage)
-
-
-            for blocker in combatPairings[attacker]:
-                if blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    blocker.dealDamage(attacker, blocker.curPower)
-
-        if self.checkSBA():
-            return True
-
-        # - Combat Damage
-
-        for attacker in combatPairings:
-
-            if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
-                remainingDamage = attacker.curPower
-
-                for blocker in combatPairings[attacker]:
-                    neededDamage = blocker.curTou - blocker.damage
-                    if attacker.hasDeathtouch():
-                        neededDamage = 1
-                    if remainingDamage > 0:
-                        if remainingDamage > neededDamage:
-                            attacker.dealDamage(blocker, neededDamage)
-                            remainingDamage -= neededDamage
-
-                if combatPairings[attacker] != [] and not attacker.hasTrample():
-                    attacker.dealDamage(blocker, remainingDamage)
-
-                else:
-                    attacker.dealDamage(opponent, remainingDamage)
-
-            for blocker in combatPairings[attacker]:
-                if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    blocker.dealDamage(attacker, blocker.curPower)
-
-        if self.checkSBA():
-            return True
-
-        # End of Combat
-        for attacker in combatPairings:
-            attacker.attacking = False
-            for blocker in combatPairings[attacker]:
-                blocker.blocking = False
-
-        ## Postcombat Main Phase
-        print("----------------------------------------------------------")
-        print("Postcombat Main Phase")
-        print("----------------------------------------------------------")
-
-        if self.mainPhase():
-            return True
-
-        ## End Phase
-        print("----------------------------------------------------------")
-        print("End Phase")
-        print("----------------------------------------------------------")
-        # End
-
-        self.printGameState()
-
-        # Cleanup
-        for permanent in activePlayer.creatures:
-            permanent.removeDamage()
-            permanent.resetPTA()
-        if activePlayer.cardsInHand() > 7:
-            activePlayer.discardExcess()
-
-        print("")
-
-        return False
-
-    def getMainActions(self):
-
-        legalActions = [['Pass']]
-        player = self.activePlayer
-
-        for card in player.hand:
-            if self.canPlay(player, card):
-                legalTargets = self.findLegalTargets(player, card)
-                targetCombinations = utils.listCombinations(legalTargets)
-                action = [card]
-                for combination in targetCombinations:
-                    action += [combination]
-                legalActions += [action]
-
-        return legalActions
-
     def getAttackingActions(self):
 
         player = self.activePlayer
@@ -414,24 +481,6 @@ class Game:
             possibleBlocksList.append(possibleBlocks)
 
         return utils.listCombinations(possibleBlocksList)
-
-    def mainPhase(self):
-
-        action = ''
-
-        while action != 'Pass':
-            legalActions = self.getMainActions()
-            action = self.activePlayer.mainPhaseAction(legalActions)
-
-            if action == 'Print':
-                self.printGameState()
-
-            if isinstance(action[0], Card):
-                self.play(action)
-                if self.checkSBA():
-                    return True
-
-        return False
 
     def readDeck(self, filename, owner):
 
@@ -486,6 +535,8 @@ parser.add_argument("-d1", "--deck1", default='deck1.txt',
 parser.add_argument("-d2", "--deck2", default='deck2.txt',
                     help="specify deck for player 2")
 parser.add_argument("-v", "--verbose",  action="store_true")
+parser.add_argument("-n", "--name", action="store_true",
+                    help="choose names for the players")
 # parser.add_argument('--decks', help='select decks')
 # parser.add_argument('deck1',
 #                     help='Deck file (player 1)')
@@ -494,4 +545,4 @@ parser.add_argument("-v", "--verbose",  action="store_true")
 
 args = parser.parse_args()
 
-jogo = Game(args.agent1, "deck1.txt", args.agent2, "deck2.txt", args.verbose)
+jogo = Game(args.agent1, "deck1.txt", args.agent2, "deck2.txt", args.verbose, args.name)
