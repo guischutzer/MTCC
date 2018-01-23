@@ -1,5 +1,6 @@
 import random
 import utils
+import collections
 import copy as c
 
 class Player:
@@ -425,27 +426,13 @@ class MulliganAgent(Player):
 
         return False
 
-    def scry(self):
-        card = self.library.pop()
-        bottom = random.choice([True, False])
-        if bottom:
-            self.library.insert(0, card)
-            print("\nAgent " + self.name + " puts the top card of its library at the bottom.")
-        else:
-            self.library.append(card)
-            print("\nAgent " + self.name + " keeps the top card of its library.")
-
-class RandomAgent(MulliganAgent):
-
-    def mainPhaseAction(self, legalActions):
-        index = random.randrange(0, len(legalActions))
-        action = legalActions[index]
+    def printMainAction(self, action):
         if action[0] is 'Pass':
-            print("Player " + self.name + " passes priority.")
+            print("Agent " + self.name + " passes priority.")
             return action[0]
         card = action[0]
         targets = action[1]
-        print("Player " + self.name + " plays " + action[0].name, end='')
+        print("Agent " + self.name + " plays " + action[0].name, end='')
         if len(targets) > 0:
             print(" targetting ", end='')
             for i in range(len(targets)):
@@ -458,17 +445,8 @@ class RandomAgent(MulliganAgent):
                 elif len(targets[i+1:]) > 1:
                     print(", ", end='')
         print(".")
-        return action
 
-    def declareAttackers(self, legalActions):
-
-        if len(legalActions) == 0:
-            print("Player " + self.name + " has declared no attacking creatures.")
-            return []
-
-        index = random.randrange(0, len(legalActions))
-        attackers = legalActions[index]
-
+    def printAttackers(self, attackers):
         if attackers == []:
             print("Player " + self.name + " has declared no attacking creatures.")
             return attackers
@@ -477,30 +455,8 @@ class RandomAgent(MulliganAgent):
         for creature in attackers:
             print(" - " + creature.stats())
         print("as attacker(s).")
-        return attackers
 
-    def assignBlockOrder(self, combatPairings):
-
-        for attacker in combatPairings:
-            n = len(combatPairings[attacker])
-            if n > 1:
-                random.shuffle(combatPairings[attacker])
-                print("Player " + self.name + " blocks " + attacker.stats())
-                i = 1
-                for blocker in combatPairings[attacker]:
-                    print(" - " + utils.getOrdinal(i) + " with " + blocker.stats())
-                    i += 1
-
-        return combatPairings
-
-    def declareBlockers(self, legalActions, combatPairings):
-
-        if len(legalActions) == 0:
-            return {}
-
-        index = random.randrange(0, len(legalActions))
-        action = legalActions[index]
-
+    def printBlockers(self, action, combatPairings):
         noBlocks = True
         print("Player " + self.name + " has declared ", end='')
         for i in range(len(self.creatures)):
@@ -516,6 +472,66 @@ class RandomAgent(MulliganAgent):
             print(" no blockers.")
         else:
             print("")
+
+        return combatPairings
+
+    def printAssignedBlockOrder(self, combatPairings, attacker):
+        print("Player " + self.name + " blocks " + attacker.stats())
+        i = 1
+        for blocker in combatPairings[attacker]:
+            print(" - " + utils.getOrdinal(i) + " with " + blocker.stats())
+            i += 1
+
+
+    def scry(self):
+        card = self.library.pop()
+        bottom = random.choice([True, False])
+        if bottom:
+            self.library.insert(0, card)
+            print("\nAgent " + self.name + " puts the top card of its library at the bottom.")
+        else:
+            self.library.append(card)
+            print("\nAgent " + self.name + " keeps the top card of its library.")
+
+class RandomAgent(MulliganAgent):
+
+    def mainPhaseAction(self, legalActions):
+        index = random.randrange(0, len(legalActions))
+        action = legalActions[index]
+        self.printMainAction(action)
+        return action
+
+    def declareAttackers(self, legalActions):
+
+        if len(legalActions) == 0:
+            print("Player " + self.name + " has declared no attacking creatures.")
+            return []
+
+        index = random.randrange(0, len(legalActions))
+        attackers = legalActions[index]
+        self.printAttackers(attackers)
+
+        return attackers
+
+    def declareBlockers(self, legalActions, combatPairings):
+
+        if len(legalActions) == 0:
+            return {}
+
+        index = random.randrange(0, len(legalActions))
+        action = legalActions[index]
+        combatPairings = self.printBlockers(action, combatPairings)
+
+        return combatPairings
+
+    def assignBlockOrder(self, combatPairings):
+
+        for attacker in combatPairings:
+            n = len(combatPairings[attacker])
+            if n > 1:
+                random.shuffle(combatPairings[attacker])
+                self.printAssignedBlockOrder(combatPairings, attacker)
+
         return combatPairings
 
     def discardExcess(self):
@@ -524,6 +540,61 @@ class RandomAgent(MulliganAgent):
             index = random.randrange(0, self.cardsInHand())
             self.discard(self.hand[index])
 
+def QLearningAgent(MulliganAgent):
+
+    def __init__(self, number, onThePlay, verbosity=False):
+        MulliganAgent.__init__(number, onThePlay, verbosity)
+        self.weights = collections.Counter()
+
+    def mainPhaseAction(self, legalActions, state):
+        action = self.getActionFromQValues(state, legalActions)
+        self.printMainAction(action)
+        return action
+
+    def declareAttackers(self, state, legalActions, combatPairings):
+
+        if len(legalActions) == 0:
+            print("Player " + self.name + " has declared no attacking creatures.")
+            return []
+
+        attackers = self.getActionFromQValues(state, legalActions)
+        self.printAttackers(attackers)
+
+        return attackers
+
+    def declareBlockers(self, legalActions, combatPairings):
+
+        if len(legalActions) == 0:
+            return {}
+
+        action = self.getActionFromQValues(state, legalActions)
+        combatPairings = self.printBlockers(action, combatPairings)
+
+        return combatPairings
+
+    def getFeatures(self, state, action):
+
+        features = collections.Counter()
+
+        features["#-of-lands"] = len(state.getLands())
+        features["#-of-untappedLands"] = len(state.getUntappedLands())
+        features["#-of-own-creatures"] = len(state.getOwnCreatures())
+        features["#-of-opponent-creatures"] = len(state.getOpponentCreatures())
+
+    def getQValue(self, state, action):
+
+        qValue = 0
+
+        if state == 'FINAL_STATE':
+            return qValue
+
+        feats = self.getFeatures(state, action)
+        weights = self.getWeights()
+
+        for entry in feats:
+            qValue += weights[entry] * feats[entry]
+
+        return qValue
 
 def isLegalAction(card, legalActions):
     for action in legalActions:
