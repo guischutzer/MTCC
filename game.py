@@ -253,6 +253,7 @@ class Game:
 
             # getMainActions() determine legal actions for the active player
             legalActions = self.getMainActions()
+            state = State(self.activePlayer, self.opponent)
             # active player then chooses which action to perform
             action = self.activePlayer.mainPhaseAction(legalActions)
 
@@ -525,6 +526,38 @@ class Game:
         command = "card = " + classname + "(owner)"
         exec(command, globals(), variables)
         return variables['card']
+
+class State:
+
+    def __init__(self, player, opponent):
+
+        self.player = player
+        self.opponent = opponent
+
+    def getLands(self):
+        return self.player.lands
+
+    def getUntappedLands(self):
+        return self.player.untappedLands
+
+    def getOwnCreatures(self):
+        return self.player.owncreatures
+
+    def getOpponentCreatures(self):
+        return self.opponent.creatures
+
+    def getOwnLifeTotal(self):
+        return self.player.life
+
+    def getOpponentLifeTotal(self):
+        return self.opponent.life
+
+    def isTerminal(self):
+        if player.lost or opponent.lost:
+            return True
+
+        return False
+
 
 parser = argparse.ArgumentParser(description='Magic: the Gathering AI utilitary')
 parser.add_argument("-a1", "--agent1",
