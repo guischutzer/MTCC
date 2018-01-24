@@ -53,7 +53,7 @@ class Permanent:
             virado = 'T'
         return (self.card.name + " " + virado)
 
-    def resetPT(self):
+    def resetPTA(self):
         return
 
     def removeDamage(self):

@@ -14,7 +14,7 @@ class Game:
     # - deck1/deck2 are the deck files
     # - verbosity prints extra data
     # - choosename is used to input different names for the players
-    def __init__(self, agent1, deck1, agent2, deck2, verbosity, choosename):
+    def __init__(self, agent1, deck1, agent2, deck2, verbosity, choosename, weights=collections.Counter()):
 
         actPlayerID = random.randrange(1, 3)
 
@@ -23,6 +23,8 @@ class Game:
             self.player_1 = Player(1)
         elif agent1 == "random" or agent1 == "Random":
             self.player_1 = RandomAgent(1, actPlayerID is 1, verbosity)
+        elif agent1 == "q" or agent1 == "Q" or re.match("qlearning", agent1, flags=re.IGNORECASE) != None:
+            self.player_1 = QLearningAgent(1, actPlayerID is 1, verbosity, weights=weights)
         else:
             self.player_1 = MulliganAgent(1, actPlayerID is 1, verbosity)
 
@@ -30,6 +32,8 @@ class Game:
             self.player_2 = Player(2)
         elif agent2 == "random" or agent2 == "Random":
             self.player_2 = RandomAgent(2, actPlayerID is 2, verbosity)
+        elif agent2 == "q" or agent2 == "Q" or re.match("qlearning", agent2, flags=re.IGNORECASE) != None:
+            self.player_2 = QLearningAgent(2, actPlayerID is 2, verbosity, weights=weights)
         else:
             self.player_2 = MulliganAgent(2, actPlayerID is 2, verbosity)
 
@@ -68,10 +72,10 @@ class Game:
 
         # Proper game starts
         n = 0
-        endGame = False # flag for ending the game
-        while not endGame:
+        self.end = False # flag for ending the game
+        while not self.end:
             n += 1
-            endGame = self.turnRoutine(n)
+            self.end = self.turnRoutine(n)
             self.changeActivePlayer()
 
     # turnRoutine(tNumber):
@@ -236,6 +240,9 @@ class Game:
         for permanent in activePlayer.creatures:
             permanent.removeDamage()
             permanent.resetPTA()
+        for permanent in opponent.creatures:
+            permanent.removeDamage()
+            permanent.resetPTA()
         if activePlayer.cardsInHand() > 7:
             activePlayer.discardExcess()
 
@@ -249,17 +256,13 @@ class Game:
         action = ''
 
         # Players can play cards until they decide to pass priority
-        while action != 'Pass':
+        while action != ['Pass']:
 
             # getMainActions() determine legal actions for the active player
             legalActions = self.getMainActions()
 
-            # active player then chooses which action to perform
-            if isinstance(self.activePlayer, QLearningAgent):
-                state = State(self.activePlayer, self.opponent)
-                action = self.activePlayer.mainPhaseAction(legalActions, state)
-            else:
-                action = self.activePlayer.mainPhaseAction(legalActions)
+            state = State(c.deepcopy(self))
+            action = self.activePlayer.mainPhaseAction(state, legalActions)
 
             # human player can choose to print game state
             if action == 'Print':
@@ -270,10 +273,15 @@ class Game:
             # since action is an element of legalActions, it can be played
             if isinstance(action[0], Card):
                 self.play(action)
-                nextState = State(self.activePlayer, self.opponent)
-                self.activePlayer.update()
-                if self.checkSBA():
+                end = self.checkSBA()
+                nextState = State(self, self.activePlayer, self.opponent)
+                nextLegalActions = self.getMainActions()
+                reward = state.getReward()
+                self.activePlayer.update(state, action, nextState, nextLegalActions, reward)
+                if end:
                     return True
+
+            self.activePlayer.currentActions = []
 
         return False
 
@@ -283,6 +291,9 @@ class Game:
     # - ['Print'] to print the board state
     # - [card, targets] to play a card targetting a list of legalTargets
     def getMainActions(self):
+
+        if self.end:
+            return []
 
         # every player always has the option to pass
         legalActions = [['Pass']]
@@ -308,6 +319,8 @@ class Game:
         # print("Legal actions:")
         # for action in legalActions:
         #     print(" - " + str(action))
+
+        player.currentActions = legalActions
 
         return legalActions
 
@@ -402,7 +415,7 @@ class Game:
 
     def checkSBA(self):
         for player in self.activePlayer, self.opponent:
-            if player.lose or player.life <= 0:
+            if player.lost or player.life <= 0:
                 print("Player " + player.name + " has lost the game.")
                 return True
 
@@ -532,57 +545,3 @@ class Game:
         command = "card = " + classname + "(owner)"
         exec(command, globals(), variables)
         return variables['card']
-
-class State:
-
-    def __init__(self, player, opponent):
-
-        self.player = player
-        self.opponent = opponent
-
-    def getLands(self):
-        return self.player.lands
-
-    def getUntappedLands(self):
-        return self.player.untappedLands
-
-    def getOwnCreatures(self):
-        return self.player.owncreatures
-
-    def getOpponentCreatures(self):
-        return self.opponent.creatures
-
-    def getOwnLifeTotal(self):
-        return self.player.life
-
-    def getOpponentLifeTotal(self):
-        return self.opponent.life
-
-    def isTerminal(self):
-        if player.lost or opponent.lost:
-            return True
-
-        return False
-
-
-parser = argparse.ArgumentParser(description='Magic: the Gathering AI utilitary')
-parser.add_argument("-a1", "--agent1",
-                    help="specify agent for player 1")
-parser.add_argument("-a2", "--agent2",
-                    help="specify agent for player 2")
-parser.add_argument("-d1", "--deck1", default='deck1.txt',
-                    help="specify deck for player 1")
-parser.add_argument("-d2", "--deck2", default='deck2.txt',
-                    help="specify deck for player 2")
-parser.add_argument("-v", "--verbose",  action="store_true")
-parser.add_argument("-n", "--name", action="store_true",
-                    help="choose names for the players")
-# parser.add_argument('--decks', help='select decks')
-# parser.add_argument('deck1',
-#                     help='Deck file (player 1)')
-# parser.add_argument('deck2',
-#                     help='Deck file (player 2)')
-
-args = parser.parse_args()
-
-jogo = Game(args.agent1, "deck1.txt", args.agent2, "deck2.txt", args.verbose, args.name)

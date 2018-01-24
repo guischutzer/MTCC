@@ -2,6 +2,7 @@ import random
 import utils
 import collections
 import copy as c
+from card import Card
 
 class Player:
 
@@ -18,6 +19,7 @@ class Player:
         self.graveyard = []
         self.untappedLands = 0
         self.landDrop = False
+        self.lost = False
 
     def rename(self, name):
         self.name = name
@@ -35,7 +37,7 @@ class Player:
 
     def draw(self, n=1):
         if (len(self.library) == 0):
-            self.lose = True
+            self.lost = True
             return
 
         for i in range(n):
@@ -273,6 +275,9 @@ class Player:
 
         return True
 
+    def update(self, state, legalActions, nextState, nextLegalActions, reward):
+        return
+
 class MulliganAgent(Player):
 
     def __init__(self, number, onThePlay, verbosity=False):
@@ -289,6 +294,7 @@ class MulliganAgent(Player):
         self.untappedLands = 0
         self.landRewards = []
         self.landDrop = False
+        self.lost = False
 
         self.verbose = verbosity
         self.onThePlay = onThePlay
@@ -469,7 +475,7 @@ class MulliganAgent(Player):
                 combatPairings[blockedCreature].append(blockingCreature)
 
         if noBlocks:
-            print(" no blockers.")
+            print("no blockers.")
         else:
             print("")
 
@@ -495,7 +501,9 @@ class MulliganAgent(Player):
 
 class RandomAgent(MulliganAgent):
 
-    def mainPhaseAction(self, legalActions):
+    def mainPhaseAction(self, state, legalActions):
+        if not legalActions:
+            return ['End']
         index = random.randrange(0, len(legalActions))
         action = legalActions[index]
         self.printMainAction(action)
@@ -540,20 +548,31 @@ class RandomAgent(MulliganAgent):
             index = random.randrange(0, self.cardsInHand())
             self.discard(self.hand[index])
 
-def QLearningAgent(MulliganAgent):
+class QLearningAgent(RandomAgent):
 
-    def __init__(self, number, onThePlay, verbosity=False, epsilon=0.8, alpha=0.8):
-        MulliganAgent.__init__(number, onThePlay, verbosity)
+    def __init__(self, number, onThePlay, verbosity, epsilon=0.8, alpha=0.5, discount=0.8, weights=collections.Counter()):
+        super().__init__(number, onThePlay, verbosity)
         self.epsilon = epsilon
-        self.weights = collections.Counter()
+        self.alpha = alpha
+        self.discount = discount
+        self.weights = weights
 
-
-    def getActionFromQValues(state, legalActions):
+    def computeActionFromQValues(self, state, legalActions):
         qMax = None
         maxActions = []
+        if state.game.activePlayer is not self:
+             return ['Wait']
 
-        for action in legalActions:
-            qValue = self.getQValue(state, action)
+        print("Choosing action:")
+        for i in range(len(legalActions)):
+            curState = c.deepcopy(state)
+            fakeAction = curState.game.activePlayer.currentActions[i]
+            if isinstance(fakeAction[0], Card):
+                curState.game.play(fakeAction)
+            qValue = self.getQValue(curState, i)
+            action = legalActions[i]
+            print("action: " + str(action))
+            print("qValue: " + str(qValue))
             if qMax == None:
                 qMax = qValue
                 maxActions = [action]
@@ -569,8 +588,8 @@ def QLearningAgent(MulliganAgent):
         return random.choice(maxActions)
 
 
-    def mainPhaseAction(self, legalActions, state):
-        action = self.getActionFromQValues(state, legalActions)
+    def mainPhaseAction(self, state, legalActions):
+        action = self.computeActionFromQValues(state, legalActions)
         self.printMainAction(action)
         return action
 
@@ -595,7 +614,7 @@ def QLearningAgent(MulliganAgent):
     #
     #     return combatPairings
 
-    def getFeatures(self, state, action):
+    def getFeatures(self, state):
 
         features = collections.Counter()
 
@@ -604,20 +623,100 @@ def QLearningAgent(MulliganAgent):
         features["#-of-own-creatures"] = len(state.getOwnCreatures())
         features["#-of-opponent-creatures"] = len(state.getOpponentCreatures())
 
+        return features
+
+    def getWeights(self):
+        return self.weights
+
     def getQValue(self, state, action):
-
         qValue = 0
-
-        if state.isTerminal():
+        if state.isTerminal() or if action[0] = 'Wait':
             return qValue
 
-        feats = self.getFeatures(state, action)
+        feats = self.getFeatures(state)
         weights = self.getWeights()
 
         for entry in feats:
             qValue += weights[entry] * feats[entry]
 
         return qValue
+
+    def update(self, state, action, nextState, nextLegalActions, reward):
+        state.stats()
+        print(str(action) + "-->")
+        nextState.stats()
+        maxAction = self.computeActionFromQValues(nextState)
+        feats = self.getFeatures(nextState)
+
+        delta = (reward + self.discount * self.getQValue(nextState, maxAction)) - self.getQValue(state, action)
+        print(reward)
+        for i in feats:
+            self.weights[i] = self.weights[i] + self.alpha * delta * feats[i]
+        print(self.weights)
+        print(feats)
+
+class State:
+
+    def __init__(self, game, lossReward=-100, winReward=100, phase='Main'):
+        self.game = game
+        self.player = game.activePlayer
+        self.opponent = game.opponent
+        self.lossReward = lossReward
+        self.winReward = winReward
+        self.phase = phase
+
+    def getReward(self):
+        if self.player.lost:
+            return self.lossReward
+        if self.opponent.lost:
+            return self.winReward
+        lifeDiff = self.getOwnLifeTotal() - self.getOpponentLifeTotal()
+        powerDiff = self.getPowerTotal(self.player.creatures) - self.getPowerTotal(self.opponent.creatures)
+        return (lifeDiff + powerDiff)/100
+
+    def getLands(self):
+        return self.player.lands
+
+    def getUntappedLands(self):
+        return self.player.untappedLands
+
+    def getOwnCreatures(self):
+        return self.player.creatures
+
+    def getOpponentCreatures(self):
+        return self.opponent.creatures
+
+    def getOwnLifeTotal(self):
+        return self.player.life
+
+    def getOpponentLifeTotal(self):
+        return self.opponent.life
+
+    def getPowerTotal(self, creatures):
+        total = 0
+        for creature in creatures:
+            total += creature.curPower
+        return total
+
+    def getToughnessTotal(self, creatures):
+        total = 0
+        for creature in creatures:
+            total += creature.curTou
+        return total
+
+    def isTerminal(self):
+        if self.player.lost or self.opponent.lost:
+            return True
+
+        return False
+
+    def stats(self):
+        print(self.player.name + ": " + str(self.getOwnLifeTotal()) + " life")
+        for creature in self.getOwnCreatures():
+            print(" - " + creature.stats())
+        print(self.opponent.name + ": " + str(self.getOpponentLifeTotal()) + " life")
+        for creature in self.getOpponentCreatures():
+            print(" - " + creature.stats())
 
 def isLegalAction(card, legalActions):
     for action in legalActions:
