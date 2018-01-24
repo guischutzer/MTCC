@@ -542,42 +542,65 @@ class RandomAgent(MulliganAgent):
 
 def QLearningAgent(MulliganAgent):
 
-    def __init__(self, number, onThePlay, verbosity=False):
+    def __init__(self, number, onThePlay, verbosity=False, epsilon=0.8, alpha=0.8):
         MulliganAgent.__init__(number, onThePlay, verbosity)
+        self.epsilon = epsilon
         self.weights = collections.Counter()
+
+
+    def getActionFromQValues(state, legalActions):
+        qMax = None
+        maxActions = []
+
+        for action in legalActions:
+            qValue = self.getQValue(state, action)
+            if qMax == None:
+                qMax = qValue
+                maxActions = [action]
+            elif qValue > qMax:
+                qMax = qValue
+                maxActions = [action]
+            elif qValue == qMax:
+                maxActions.append(action)
+
+        if not maxActions:
+            return None
+
+        return random.choice(maxActions)
+
 
     def mainPhaseAction(self, legalActions, state):
         action = self.getActionFromQValues(state, legalActions)
         self.printMainAction(action)
         return action
 
-    def declareAttackers(self, state, legalActions, combatPairings):
+    # def declareAttackers(self, state, legalActions, combatPairings):
+    #
+    #     if len(legalActions) == 0:
+    #         print("Player " + self.name + " has declared no attacking creatures.")
+    #         return []
+    #
+    #     attackers = self.getActionFromQValues(state, legalActions)
+    #     self.printAttackers(attackers)
+    #
+    #     return attackers
 
-        if len(legalActions) == 0:
-            print("Player " + self.name + " has declared no attacking creatures.")
-            return []
-
-        attackers = self.getActionFromQValues(state, legalActions)
-        self.printAttackers(attackers)
-
-        return attackers
-
-    def declareBlockers(self, legalActions, combatPairings):
-
-        if len(legalActions) == 0:
-            return {}
-
-        action = self.getActionFromQValues(state, legalActions)
-        combatPairings = self.printBlockers(action, combatPairings)
-
-        return combatPairings
+    # def declareBlockers(self, state, legalActions, combatPairings):
+    #
+    #     if len(legalActions) == 0:
+    #         return {}
+    #
+    #     action = self.getActionFromQValues(state, legalActions)
+    #     combatPairings = self.printBlockers(action, combatPairings)
+    #
+    #     return combatPairings
 
     def getFeatures(self, state, action):
 
         features = collections.Counter()
 
         features["#-of-lands"] = len(state.getLands())
-        features["#-of-untappedLands"] = len(state.getUntappedLands())
+        features["#-of-untappedLands"] = state.getUntappedLands()
         features["#-of-own-creatures"] = len(state.getOwnCreatures())
         features["#-of-opponent-creatures"] = len(state.getOpponentCreatures())
 
@@ -585,7 +608,7 @@ def QLearningAgent(MulliganAgent):
 
         qValue = 0
 
-        if state == 'FINAL_STATE':
+        if state.isTerminal():
             return qValue
 
         feats = self.getFeatures(state, action)

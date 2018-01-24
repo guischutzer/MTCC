@@ -253,9 +253,13 @@ class Game:
 
             # getMainActions() determine legal actions for the active player
             legalActions = self.getMainActions()
-            state = State(self.activePlayer, self.opponent)
+
             # active player then chooses which action to perform
-            action = self.activePlayer.mainPhaseAction(legalActions)
+            if isinstance(self.activePlayer, QLearningAgent):
+                state = State(self.activePlayer, self.opponent)
+                action = self.activePlayer.mainPhaseAction(legalActions, state)
+            else:
+                action = self.activePlayer.mainPhaseAction(legalActions)
 
             # human player can choose to print game state
             if action == 'Print':
@@ -266,6 +270,8 @@ class Game:
             # since action is an element of legalActions, it can be played
             if isinstance(action[0], Card):
                 self.play(action)
+                nextState = State(self.activePlayer, self.opponent)
+                self.activePlayer.update()
                 if self.checkSBA():
                     return True
 
