@@ -1,16 +1,17 @@
 import random
 import utils
 import copy as c
+import queue as q
 
 class Player:
 
-    def __init__(self, number):
+    def __init__(self, ID):
         self.name = 'Unknown Player'
         self.life = 20
         self.hand = []
         self.library = []
         self.lose = False
-        self.number = number
+        self.ID = ID
         self.creatures = []
         self.lands = []
         self.active = False
@@ -76,21 +77,6 @@ class Player:
             print(str(i) + ") " + card.name)
             i += 1
         return
-
-    def play(self, card):
-        if card.ctype == "Land":
-            permanent = Land(card, self)
-            self.lands.append(permanent)
-            return permanent
-
-        if card.ctype == "Creature":
-            permanent = Creature(card, self)
-            self.creatures.append(permanent)
-            return permanent
-
-        else:
-            self.graveyard.append(card)
-            return None
 
     def chooseTargets(self, legalTargets):
 
@@ -177,6 +163,9 @@ class Player:
                     c = ''
 
         return 'Pass'
+
+    def printMainAction(self, source, targets):
+        return
 
     def declareAttackers(self, legalActions):
 
@@ -274,13 +263,13 @@ class Player:
 
 class MulliganAgent(Player):
 
-    def __init__(self, number, onThePlay, verbosity=False):
+    def __init__(self, ID, onThePlay, verbosity=False):
         self.name = 'Unknown Player'
         self.life = 20
         self.hand = []
         self.library = []
         self.lose = False
-        self.number = number
+        self.ID = ID
         self.creatures = []
         self.lands = []
         self.active = False
@@ -440,12 +429,12 @@ class RandomAgent(MulliganAgent):
     def mainPhaseAction(self, legalActions):
         index = random.randrange(0, len(legalActions))
         action = legalActions[index]
-        if action[0] is 'Pass':
-            print("Player " + self.name + " passes priority.")
-            return action[0]
-        card = action[0]
-        targets = action[1]
-        print("Player " + self.name + " plays " + action[0].name, end='')
+        return action
+
+    def printMainAction(self, source, targets):
+        if source == 'Pass':
+            return
+        print("Player " + self.name + " plays " + source.name, end='')
         if len(targets) > 0:
             print(" targetting ", end='')
             for i in range(len(targets)):
@@ -458,7 +447,6 @@ class RandomAgent(MulliganAgent):
                 elif len(targets[i+1:]) > 1:
                     print(", ", end='')
         print(".")
-        return action
 
     def declareAttackers(self, legalActions):
 
@@ -524,6 +512,32 @@ class RandomAgent(MulliganAgent):
             index = random.randrange(0, self.cardsInHand())
             self.discard(self.hand[index])
 
+class SearchAgent(MulliganAgent):
+
+    def breadthFirstSearch(self, startState):
+
+        q = q.Queue()
+        q.put(startState)
+        maxReward = 0
+        actionPath = []
+
+        while not q.empty():
+            state = q.get()
+            if state.isTerminal():
+                reward = state.getReward()
+                if reward >= maxReward:
+                    maxreward = reward
+                    actionPath = state.getPath()
+            else:
+                for s in state.getChildren():
+                    q.put(s)
+
+        return actionPath
+
+class State:
+
+    def __init__(self):
+        return
 
 def isLegalAction(card, legalActions):
     for action in legalActions:

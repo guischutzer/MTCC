@@ -7,7 +7,7 @@ import inspect
 
 class Permanent:
 
-    def __init__(self, card, player):
+    def __init__(self, card, player, ID):
         self.card = card
         self.abilities = c.copy(card.abilities)
         self.ctype = card.ctype
@@ -16,6 +16,7 @@ class Permanent:
         self.tapped = False
         self.sick = False
         self.destroyed = False
+        self.ID = ID
 
     def destroy(self):
         self.destroyed = True
@@ -61,8 +62,8 @@ class Permanent:
 
 class Land(Permanent):
 
-    def __init__(self, card, player):
-        super().__init__(card, player)
+    def __init__(self, card, player, ID):
+        super().__init__(card, player, ID)
         self.controller.untappedLands += 1
 
     def untap(self):
@@ -78,8 +79,8 @@ class Land(Permanent):
 
 class Creature(Permanent):
 
-    def __init__(self, card, player):
-        super().__init__(card, player)
+    def __init__(self, card, player, ID):
+        super().__init__(card, player, ID)
         self.dealtLethal = False
 
         self.power = card.power

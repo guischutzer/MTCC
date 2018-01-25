@@ -16,22 +16,23 @@ class Game:
     # - choosename is used to input different names for the players
     def __init__(self, agent1, deck1, agent2, deck2, verbosity, choosename):
 
-        actPlayerID = random.randrange(1, 3)
+        actPlayerID = random.randrange(-1, 1)
+        self.permanentID = 0
 
         # Players initialization
         if agent1 is None:
-            self.player_1 = Player(1)
+            self.player_1 = Player(0)
         elif agent1 == "random" or agent1 == "Random":
-            self.player_1 = RandomAgent(1, actPlayerID is 1, verbosity)
+            self.player_1 = RandomAgent(0, actPlayerID is 0, verbosity)
         else:
-            self.player_1 = MulliganAgent(1, actPlayerID is 1, verbosity)
+            self.player_1 = MulliganAgent(0, actPlayerID is 0, verbosity)
 
         if agent2 is None:
-            self.player_2 = Player(2)
+            self.player_2 = Player(-1)
         elif agent2 == "random" or agent2 == "Random":
-            self.player_2 = RandomAgent(2, actPlayerID is 2, verbosity)
+            self.player_2 = RandomAgent(-1, actPlayerID is -1, verbosity)
         else:
-            self.player_2 = MulliganAgent(2, actPlayerID is 2, verbosity)
+            self.player_2 = MulliganAgent(-1, actPlayerID is -1, verbosity)
 
         if choosename:
             name1 = input("Choose a name for Player 1: ")
@@ -233,7 +234,7 @@ class Game:
         self.printGameState()
 
         # Cleanup
-        for permanent in activePlayer.creatures:
+        for permanent in activePlayer.creatures + opponent.creatures:
             permanent.removeDamage()
             permanent.resetPTA()
         if activePlayer.cardsInHand() > 7:
@@ -249,12 +250,13 @@ class Game:
         action = ''
 
         # Players can play cards until they decide to pass priority
-        while action != 'Pass':
+        while action != ['Pass']:
 
             # getMainActions() determine legal actions for the active player
             legalActions = self.getMainActions()
             # active player then chooses which action to perform
             action = self.activePlayer.mainPhaseAction(legalActions)
+            targets = []
 
             # human player can choose to print game state
             if action == 'Print':
@@ -265,9 +267,15 @@ class Game:
             # since action is an element of legalActions, it can be played
             if isinstance(action[0], Card):
                 self.play(action)
+                if len(action) > 1:
+                    for ID in action[1]:
+                        targets.append(self.getPermanentFromID(ID))
+
+                self.activePlayer.printMainAction(action[0], targets)
                 if self.checkSBA():
                     return True
 
+        print("Player " + self.activePlayer.name + " passes priority.")
         return False
 
     # getMainActions() returns active players legal actions
@@ -283,10 +291,12 @@ class Game:
 
         # each card in the active player's hand is a potential source of actions
         for card in player.hand:
+            card.setLegalTargets([])
             # if the card can be played, there is at least one legal action to play it
             if self.canPlay(player, card):
                 # finds all the legal targets for each of the card's effects
                 legalTargets = self.findLegalTargets(player, card)
+                card.setLegalTargets(legalTargets)
                 # returns every legal combination of targets
                 targetCombinations = utils.listCombinations(legalTargets)
                 action = [card]
@@ -295,12 +305,16 @@ class Game:
                     action += [targets]
                     legalActions.append(action)
                 for targets in targetCombinations:
-                    action = [card, targets]
+                    targetIDs = []
+                    for t in targets:
+                        targetIDs.append(t.ID)
+                    action = [card, targetIDs]
                     legalActions.append(action)
 
-        # print("Legal actions:")
-        # for action in legalActions:
-        #     print(" - " + str(action))
+        # if player.verbose:
+        #     print("Legal actions:")
+        #     for action in legalActions:
+        #         print(" - " + str(action))
 
         return legalActions
 
@@ -343,11 +357,13 @@ class Game:
     def findLegalTargets(self, player, card):
 
         legalTargets = []
+        if card.targets == []:
+            return legalTargets
 
         opponent = self.opponentOf(player)
         ownCreatures = copy(player.creatures)
         if card.ctype == 'Creature':
-            ownCreatures.append(Creature(card, player))
+            ownCreatures.append(Creature(card, player, self.permanentID + 1))
 
         opponentCreatures = copy(opponent.creatures)
         for creature in opponentCreatures:
@@ -395,7 +411,9 @@ class Game:
 
     def checkSBA(self):
         for player in self.activePlayer, self.opponent:
-            if player.lose or player.life <= 0:
+            if player.life <= 0:
+                player.lose = True
+            if player.lose:
                 print("Player " + player.name + " has lost the game.")
                 return True
 
@@ -414,7 +432,7 @@ class Game:
     def play(self, action):
 
         card = action[0]
-        targets = action[1]
+        targetIDs = action[1]
 
         player = self.activePlayer
         opponent = self.opponent
@@ -424,7 +442,7 @@ class Game:
 
         if card.ctype == "Land":
             player.landDrop = True
-            permanent = Land(card, player)
+            permanent = Land(card, player, self.newPermanentID())
             player.lands.append(permanent)
             return permanent
 
@@ -434,8 +452,11 @@ class Game:
                 paidMana += 1
 
         if card.ctype == "Creature":
-            permanent = Creature(card, player)
+            permanent = Creature(card, player, self.newPermanentID())
             player.creatures.append(permanent)
+            targets = []
+            for ID in targetIDs:
+                targets.append(self.getPermanentFromID(ID))
             for target in targets:
                 for i in range(len(targets)):
                     if targets[i] not in player.creatures + opponent.creatures:
@@ -445,9 +466,49 @@ class Game:
             return permanent
 
         if card.ctype == "Sorcery":
+            targets = []
+            for ID in targetIDs:
+                targets.append(self.getPermanentFromID(ID))
             card.effect(targets)
             player.graveyard.append(card)
             return None
+
+    def newPermanentID(self):
+        self.permanentID += 1
+        return self.permanentID
+
+    def getPermanentFromID(self, permanentID):
+        if permanentID == 0:
+            return self.player_1
+        elif permanentID == -1:
+            return self.player_2
+        creatures = self.activePlayer.creatures
+        if len(creatures) > 0:
+            if creatures[0].ID <= permanentID and creatures[-1].ID >= permanentID:
+                for creature in creatures:
+                    if creature.ID == permanentID:
+                        return creature
+        creatures = self.opponent.creatures
+        if len(creatures) > 0:
+            if creatures[0].ID <= permanentID and creatures[-1].ID >= permanentID:
+                for creature in creatures:
+                    if creature.ID == permanentID:
+                        return creature
+        lands = self.activePlayer.lands
+        if len(lands) > 0:
+            if lands[0].ID <= permanentID and lands[-1].ID >= permanentID:
+                for land in lands:
+                    if land.ID == permanentID:
+                        return land
+        lands = self.opponent.lands
+        if len(lands) > 0:
+            if lands[0].ID <= permanentID and lands[-1].ID >= permanentID:
+                for land in lands:
+                    if land.ID == permanentID:
+                        return land
+        print("Permanent with ID " + str(permanentID) + " was not found.")
+        return None
+
 
     def printGameState(self):
         print("Active Player: " + self.activePlayer.name + " - " + str(self.activePlayer.life) + " life")
@@ -526,6 +587,48 @@ class Game:
         exec(command, globals(), variables)
         return variables['card']
 
+class State:
+
+    def __init__(self, game, actionPath):
+        self.game = game
+        self.actionPath = actionPath
+        self.ownLifeTotal = game.activePlayer.life
+        self.opponentLifeTotal = game.opponent.life
+        self.ownPower = 0
+        self.opponentPower = 0
+        self.landNumber = len(game.activePlayer.lands)
+        self.handSize = len(game.activePlayer.hand)
+        self.winReward = 100
+        self.lossReward = -100
+        for creature in game.activePlayer.creatures:
+            self.ownPower += creature.curPower
+        for creature in game.opponent.creatures:
+            self.opponentPower += creature.curPower
+
+    def isTerminal(self):
+        if self.parentAction == ['Pass'] or self.opponentLifeTotal <= 0 or self.ownLifeTotal <= 0:
+            return True
+        return False
+
+    def getChildren(self):
+        children = []
+        for action in self.game.getMainActions():
+            game = c.deepcopy(self.game)
+            game.play(action)
+            children.append(State(game, actionPath + [action]))
+        return children
+
+    def getReward(self):
+        if self.opponentLifeTotal <= 0:
+            return self.winReward
+        if self.ownLifeTotal <= 0:
+            return self.lossReward
+        return (self.ownLifeTotal + self.opponentLifeTotal)/4 + self.ownPower - self.opponentPower + 1.1*self.landNumber + self.handSize
+
+    def getPath(self):
+        return self.actionPath
+
+
 parser = argparse.ArgumentParser(description='Magic: the Gathering AI utilitary')
 parser.add_argument("-a1", "--agent1",
                     help="specify agent for player 1")
@@ -538,11 +641,6 @@ parser.add_argument("-d2", "--deck2", default='deck2.txt',
 parser.add_argument("-v", "--verbose",  action="store_true")
 parser.add_argument("-n", "--name", action="store_true",
                     help="choose names for the players")
-# parser.add_argument('--decks', help='select decks')
-# parser.add_argument('deck1',
-#                     help='Deck file (player 1)')
-# parser.add_argument('deck2',
-#                     help='Deck file (player 2)')
 
 args = parser.parse_args()
 
