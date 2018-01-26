@@ -270,7 +270,6 @@ class Game:
                 if len(action) > 1:
                     for ID in action[1]:
                         targets.append(self.getPermanentFromID(ID))
-
                 self.activePlayer.printMainAction(action[0], targets)
                 if self.checkSBA():
                     return True

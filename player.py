@@ -99,7 +99,7 @@ class Player:
             while c < 1 or c > len(target):
                 c = int(input("Choose a target: "))
             chosenTarget = target[c - 1]
-            chosenTargets.append(chosenTarget)
+            chosenTargets.append(chosenTarget.ID)
 
         return chosenTargets
 
@@ -162,7 +162,7 @@ class Player:
                         print("There are no valid targets.")
                     c = ''
 
-        return 'Pass'
+        return ['Pass']
 
     def printMainAction(self, source, targets):
         return
