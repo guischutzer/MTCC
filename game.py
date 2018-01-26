@@ -24,6 +24,8 @@ class Game:
             self.player_1 = Player(0)
         elif agent1 == "random" or agent1 == "Random":
             self.player_1 = RandomAgent(0, actPlayerID is 0, verbosity)
+        elif agent1 == "search" or agent1 == "Search":
+            self.player_1 = SearchAgent(0, actPlayerID is 0, verbosity)
         else:
             self.player_1 = MulliganAgent(0, actPlayerID is 0, verbosity)
 
@@ -31,6 +33,8 @@ class Game:
             self.player_2 = Player(-1)
         elif agent2 == "random" or agent2 == "Random":
             self.player_2 = RandomAgent(-1, actPlayerID is -1, verbosity)
+        elif agent2 == "search" or agent2 == "Search":
+            self.player_2 = SearchAgent(-1, actPlayerID is -1, verbosity)
         else:
             self.player_2 = MulliganAgent(-1, actPlayerID is -1, verbosity)
 
@@ -247,34 +251,49 @@ class Game:
     # Main phase method. Lets players play cards
     def mainPhase(self):
 
-        action = ''
+        player = self.activePlayer
 
-        # Players can play cards until they decide to pass priority
-        while action != ['Pass']:
-
-            # getMainActions() determine legal actions for the active player
-            legalActions = self.getMainActions()
-            # active player then chooses which action to perform
-            action = self.activePlayer.mainPhaseAction(legalActions)
-            targets = []
-
-            # human player can choose to print game state
-            if action == 'Print':
-                self.printGameState()
-
-            # an action of playing a card is structured as following:
-            # [card, [target1, target2, ...]]
-            # since action is an element of legalActions, it can be played
-            if isinstance(action[0], Card):
+        if isinstance(player, SearchAgent):
+            state = State(self, [])
+            actions = player.breadthFirstSearch(state)
+            for i in range(len(actions) - 1):
+                action = actions[i]
+                card = player.hand[action[0]]
                 self.play(action)
-                if len(action) > 1:
-                    for ID in action[1]:
-                        targets.append(self.getPermanentFromID(ID))
-                self.activePlayer.printMainAction(action[0], targets)
+                targets = []
+                for ID in action[1]:
+                    targets.append(self.getPermanentFromID(ID))
+                player.printMainAction(card, targets)
                 if self.checkSBA():
                     return True
+        else:
+            action = ['','']
+            # Players can play cards until they decide to pass priority
+            while action[0] != 'Pass':
 
-        print("Player " + self.activePlayer.name + " passes priority.")
+                # getMainActions() determine legal actions for the active player
+                legalActions = self.getMainActions()
+                # active player then chooses which action to perform
+                action = player.mainPhaseAction(legalActions)
+                targets = []
+
+                # human player can choose to print game state
+                if action[0] == 'Print':
+                    self.printGameState()
+
+                # an action of playing a card is structured as following:
+                # [card, [target1, target2, ...]]
+                # since action is an element of legalActions, it can be played
+                if type(action[0]) == int:
+                    card = player.hand[action[0]]
+                    self.play(action)
+                    for ID in action[1]:
+                        targets.append(self.getPermanentFromID(ID))
+                    player.printMainAction(card, targets)
+                    if self.checkSBA():
+                        return True
+
+        print("Player " + player.name + " passes priority.")
         return False
 
     # getMainActions() returns active players legal actions
@@ -285,11 +304,12 @@ class Game:
     def getMainActions(self):
 
         # every player always has the option to pass
-        legalActions = [['Pass']]
+        legalActions = [['Pass', []]]
         player = self.activePlayer
 
         # each card in the active player's hand is a potential source of actions
-        for card in player.hand:
+        for i in range(len(player.hand)):
+            card = player.hand[i]
             card.setLegalTargets([])
             # if the card can be played, there is at least one legal action to play it
             if self.canPlay(player, card):
@@ -298,7 +318,7 @@ class Game:
                 card.setLegalTargets(legalTargets)
                 # returns every legal combination of targets
                 targetCombinations = utils.listCombinations(legalTargets)
-                action = [card]
+                action = [i]
                 targets = []
                 if targetCombinations == []:
                     action += [targets]
@@ -307,7 +327,7 @@ class Game:
                     targetIDs = []
                     for t in targets:
                         targetIDs.append(t.ID)
-                    action = [card, targetIDs]
+                    action = [i, targetIDs]
                     legalActions.append(action)
 
         # if player.verbose:
@@ -430,7 +450,7 @@ class Game:
 
     def play(self, action):
 
-        card = action[0]
+        card = self.activePlayer.hand[action[0]]
         targetIDs = action[1]
 
         player = self.activePlayer
@@ -591,6 +611,10 @@ class State:
     def __init__(self, game, actionPath):
         self.game = game
         self.actionPath = actionPath
+        if len(actionPath) > 0:
+            self.parentAction = actionPath[-1]
+        else:
+            self.parentAction = None
         self.ownLifeTotal = game.activePlayer.life
         self.opponentLifeTotal = game.opponent.life
         self.ownPower = 0
@@ -605,16 +629,20 @@ class State:
             self.opponentPower += creature.curPower
 
     def isTerminal(self):
-        if self.parentAction == ['Pass'] or self.opponentLifeTotal <= 0 or self.ownLifeTotal <= 0:
+        if self.parentAction == None:
+            return False
+        if self.parentAction[0] == 'Pass' or self.opponentLifeTotal <= 0 or self.ownLifeTotal <= 0:
             return True
         return False
 
     def getChildren(self):
         children = []
         for action in self.game.getMainActions():
-            game = c.deepcopy(self.game)
-            game.play(action)
-            children.append(State(game, actionPath + [action]))
+            game = self.game
+            if action[0] != 'Pass':
+                game = c.deepcopy(self.game)
+                game.play(action)
+            children.append(State(game, self.actionPath + [action]))
         return children
 
     def getReward(self):
@@ -622,10 +650,23 @@ class State:
             return self.winReward
         if self.ownLifeTotal <= 0:
             return self.lossReward
-        return (self.ownLifeTotal + self.opponentLifeTotal)/4 + self.ownPower - self.opponentPower + 1.1*self.landNumber + self.handSize
+        print(self)
+        reward = (self.ownLifeTotal - self.opponentLifeTotal)/4 + self.ownPower - self.opponentPower + 1.1*self.landNumber + self.handSize
+        print("Reward: " + str(reward))
+        return reward
 
     def getPath(self):
         return self.actionPath
+
+    def __str__(self):
+        s = "own life: " + str(self.ownLifeTotal)
+        s += "\nopp life: " + str(self.opponentLifeTotal)
+        s += "\nown power: " + str(self.ownPower)
+        s += "\nopp power: " + str(self.opponentPower)
+        s += "\naction path: "
+        for action in self.actionPath:
+            s += "\n" + str(action)
+        return s
 
 
 parser = argparse.ArgumentParser(description='Magic: the Gathering AI utilitary')

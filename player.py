@@ -1,7 +1,7 @@
 import random
 import utils
 import copy as c
-import queue as q
+import queue
 
 class Player:
 
@@ -142,15 +142,16 @@ class Player:
             self.showHand()
             c = input("Choose a card from your hand (0 will pass priority, 'p' prints the game state): ")
             if c == 'p':
-                return 'Print'
+                return ['Print', []]
             c = int(c)
             if c > 0 and c <= len(self.hand):
-                card = self.hand[c - 1]
-                if isLegalAction(card, legalActions):
+                index = c - 1
+                card = self.hand[index]
+                if isLegalAction(index, legalActions):
                     legalTargets = card.legalTargets
                     targets = self.chooseTargets(legalTargets)
                     action = []
-                    action.append(card)
+                    action.append(index)
                     action.append(targets)
                     return action
                 else:
@@ -431,10 +432,10 @@ class RandomAgent(MulliganAgent):
         action = legalActions[index]
         return action
 
-    def printMainAction(self, source, targets):
-        if source == 'Pass':
+    def printMainAction(self, card, targets):
+        if card == 'Pass':
             return
-        print("Player " + self.name + " plays " + source.name, end='')
+        print("Player " + self.name + " plays " + card.name, end='')
         if len(targets) > 0:
             print(" targetting ", end='')
             for i in range(len(targets)):
@@ -501,7 +502,7 @@ class RandomAgent(MulliganAgent):
                 combatPairings[blockedCreature].append(blockingCreature)
 
         if noBlocks:
-            print(" no blockers.")
+            print("no blockers.")
         else:
             print("")
         return combatPairings
@@ -512,11 +513,11 @@ class RandomAgent(MulliganAgent):
             index = random.randrange(0, self.cardsInHand())
             self.discard(self.hand[index])
 
-class SearchAgent(MulliganAgent):
+class SearchAgent(RandomAgent):
 
     def breadthFirstSearch(self, startState):
 
-        q = q.Queue()
+        q = queue.Queue()
         q.put(startState)
         maxReward = 0
         actionPath = []
@@ -534,10 +535,6 @@ class SearchAgent(MulliganAgent):
 
         return actionPath
 
-class State:
-
-    def __init__(self):
-        return
 
 def isLegalAction(card, legalActions):
     for action in legalActions:
