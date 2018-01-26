@@ -650,9 +650,9 @@ class State:
             return self.winReward
         if self.ownLifeTotal <= 0:
             return self.lossReward
-        print(self)
+        # print(self)
         reward = (self.ownLifeTotal - self.opponentLifeTotal)/4 + self.ownPower - self.opponentPower + 1.1*self.landNumber + self.handSize
-        print("Reward: " + str(reward))
+        # print("Reward: " + str(reward))
         return reward
 
     def getPath(self):
