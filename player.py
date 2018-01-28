@@ -206,7 +206,7 @@ class Player:
         return combatPairings
 
 
-    def declareBlockers(self, legalActions, combatPairings):
+    def declareBlockers(self, legalActions, combatPairings, state):
 
         print(self.name + ", declare blockers: ")
         for attacker in combatPairings:
@@ -482,7 +482,7 @@ class RandomAgent(MulliganAgent):
 
         return combatPairings
 
-    def declareBlockers(self, legalActions, combatPairings):
+    def declareBlockers(self, legalActions, combatPairings, state):
 
         if len(legalActions) == 0:
             return {}
@@ -515,6 +515,93 @@ class RandomAgent(MulliganAgent):
 
 class SearchAgent(RandomAgent):
 
+    def chooseBlockers(self, legalActions, combatPairings, state):
+        maxReward = -100
+        maxRewardPairings = combatPairings
+        for blocks in legalActions:
+            newGame = c.deepcopy(state.game)
+            for i in range(len(blocks)):
+                blocker = newGame.opponent.creatures[i]
+                attacker = blocks[i]
+                combatPairings[attacker].append(blocker)
+            pairingIDs = self.assignBlockOrder(combatPairings, blocks, newGame)
+            pairing = newGame.combatPairingsFromIDs(pairingIDs)
+            newGame.resolveCombat(pairing)
+            newState = State(newGame, 'Combat', None)
+            reward = -newState.getReward()
+            if reward > maxReward:
+                maxRewardPairings = pairingIDs
+                maxReward = reward
+
+        return maxRewardPairings
+
+    def declareBlockers(self, legalActions, combatPairings, state):
+
+        pairings = self.chooseBlockers(legalActions, combatPairings, state)
+
+        noBlocks = True
+        print("Agent " + self.name + " has declared ", end='')
+        finalPairings = state.game.combatPairingsFromIDs(pairings)
+        for attacker in finalPairings:
+            for blocker in finalLists[attacker]:
+                noBlocks = False
+                print("")
+                print(" - " + blocker.stats() + " blocking " + attacker.stats(), end='')
+
+        if noBlocks:
+            print("no blockers.")
+        else:
+            print("")
+        return finalPairings
+
+    def assignBlockOrder(self, combatPairings, blocks, game):
+
+        combatPairings = self.chooseBlockOrder(self, combatPairings, blocks, game)
+
+        combatPairings = self.combatPairingsFromIDs(combatPairings)
+        for attacker in combatPairings:
+            if len(combatPairings[attacker]) > 1:
+                print("Player " + self.name + " blocks " + attacker.stats())
+                i = 1
+                for blocker in combatPairings[attacker]:
+                    print(" - " + utils.getOrdinal(i) + " with " + blocker.stats())
+                    i += 1
+
+        return combatPairings
+
+    def chooseBlockOrder(self, combatPairings, blocks, game):
+
+        listOfPairings = utils.intraPermutations(combatPairings)
+        maxReward = None
+        assignedPairingIDs = {}
+        for pairing in listOfPairings:
+            newGame = c.deepcopy(blockingGame)
+            newGame.combatPairings = {}
+            pairingIDs = {}
+            for attacker in pairing:
+                newAttacker = newGame.getPermanentFromID(attacker.ID)
+                newGame.combatPairings[newAttacker] = []
+                pairingIDs[attacker.ID] = []
+                for blocker in pairing[attacker]:
+                    newBlocker = newGame.getPermanentFromID(blocker.ID)
+                    pairingIDs[attacker.ID].append(blocker.ID)
+                    newGame.combatPairings[newAttacker].append(blocker)
+            newGame.resolveCombat(newGame.combatPairings)
+            state = State(newGame, 'Combat', None)
+            reward = state.getReward()
+            if maxReward == None or reward >= maxReward:
+                maxReward = reward
+                assignedPairingIDs = pairingIDs
+
+        return assignedPairingIDs
+
+    def getChildren(self, state):
+
+        if state != 'Combat':
+            return state.getChildren()
+
+        return self.combatMaxMin(state)
+
     def breadthFirstSearch(self, startState):
 
         q = queue.Queue()
@@ -523,14 +610,16 @@ class SearchAgent(RandomAgent):
         actionPath = []
 
         while not q.empty():
+            print(q.qsize())
             state = q.get()
+            print(state.phase)
             if state.isTerminal():
                 reward = state.getReward()
                 if reward >= maxReward:
                     maxreward = reward
                     actionPath = state.getPath()
             else:
-                for s in state.getChildren():
+                for s in self.getChildren(state):
                     q.put(s)
 
         return actionPath

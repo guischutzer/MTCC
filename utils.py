@@ -1,5 +1,6 @@
 import math
 import copy as c
+import itertools
 
 def confirm(c):
     if (c == 'y') or (c == 'Y'):
@@ -50,6 +51,32 @@ def listArrangements(lst):
         finalLists.append([lst[0]] + item)
         finalLists.append([] + item)
     return finalLists
+
+def intraPermutations(d):
+
+    if len(d) == 0:
+        return {}
+
+    if len(d) == 1:
+        dictList = []
+        element = next(iter(d.keys()))
+        for perm in itertools.permutations(d[element]):
+            newDict = {element : perm}
+            dictList.append(newDict)
+        return dictList
+
+    dictList = []
+    element = next(iter(d.keys()))
+    curList = d[element]
+    newDict = c.copy(d)
+    del newDict[element]
+    for perm in itertools.permutations(curList):
+        for dictFromLists in intraPermutations(newDict):
+            dictFromLists[element] = perm
+            dictList.append(dictFromLists)
+    return dictList
+
+a = {"att1" : [1,2,3], "att2" : [4, 5], "att3" : [6,7,8]}
 
 def getOrdinal(number):
     return ordinals[number]

@@ -23,20 +23,20 @@ class Game:
         if agent1 is None:
             self.player_1 = Player(0)
         elif agent1 == "random" or agent1 == "Random":
-            self.player_1 = RandomAgent(0, actPlayerID is 0, verbosity)
+            self.player_1 = RandomAgent(0, actPlayerID == 0, verbosity)
         elif agent1 == "search" or agent1 == "Search":
-            self.player_1 = SearchAgent(0, actPlayerID is 0, verbosity)
+            self.player_1 = SearchAgent(0, actPlayerID == 0, verbosity)
         else:
-            self.player_1 = MulliganAgent(0, actPlayerID is 0, verbosity)
+            self.player_1 = MulliganAgent(0, actPlayerID == 0, verbosity)
 
         if agent2 is None:
             self.player_2 = Player(-1)
         elif agent2 == "random" or agent2 == "Random":
-            self.player_2 = RandomAgent(-1, actPlayerID is -1, verbosity)
+            self.player_2 = RandomAgent(-1, actPlayerID == -1, verbosity)
         elif agent2 == "search" or agent2 == "Search":
-            self.player_2 = SearchAgent(-1, actPlayerID is -1, verbosity)
+            self.player_2 = SearchAgent(-1, actPlayerID == -1, verbosity)
         else:
-            self.player_2 = MulliganAgent(-1, actPlayerID is -1, verbosity)
+            self.player_2 = MulliganAgent(-1, actPlayerID == -1, verbosity)
 
         if choosename:
             name1 = input("Choose a name for Player 1: ")
@@ -84,7 +84,6 @@ class Game:
     # with events like a normal Magic turn
     def turnRoutine(self, tNumber):
 
-
         activePlayer = self.activePlayer
         opponent = self.opponent
 
@@ -119,7 +118,9 @@ class Game:
         print("----------------------------------------------------------")
 
         # Main Phase method
-        if self.mainPhase():
+        self.attackers = None
+        self.assignedBlock = False
+        if self.mainPhase(1):
             return True
 
         ## Combat Phase
@@ -132,15 +133,12 @@ class Game:
 
         # Get all legal actions in the form of:
         # [creature1 - attacking or not, creature2 - attacking or not, ...]
-        legalActions = self.getAttackingActions()
         # Active player chooses how creatures attack
-        attackers = activePlayer.declareAttackers(legalActions)
-
+        if self.attackers == None:
+            legalActions = self.getAttackingActions()
+            self.attackers = activePlayer.declareAttackers(legalActions)
         # combatPairings pair attackers with their assigned blockers
-        combatPairings = {}
-        for creature in attackers:
-            creature.attack()
-            combatPairings[creature] = []
+        self.combatPairings = self.attack(self.attackers)
 
         # Declare Blockers - Not Active Player
 
@@ -148,75 +146,22 @@ class Game:
         # arrangements possible for each of its creatures to block
         # the opponent's attacking creatures. Each type of player/agent
         # then chooses the action differently
-        legalActions = self.getBlockingActions(attackers)
-        combatPairings = opponent.declareBlockers(legalActions, combatPairings)
+        legalActions = self.getBlockingActions(self.attackers)
+        state = State(self, 'Combat', [])
+        self.combatPairings = self.opponent.declareBlockers(legalActions, self.combatPairings, state)
+
 
         ## Choosing Block Order - Active Player
-        combatPairings = activePlayer.assignBlockOrder(combatPairings)
+        self.combatPairings = activePlayer.assignBlockOrder(self.combatPairings)
 
         # Combat Damage
-        # - First & Double Strike Damage
-        # All the first-strikers and double-strikers deal first strike damage
-        for attacker in combatPairings:
-
-            if attacker.hasFirstStrike() or attacker.hasDoubleStrike():
-                remainingDamage = attacker.curPower
-
-                for blocker in combatPairings[attacker]:
-                    neededDamage = blocker.curTou - blocker.damage
-                    if attacker.hasDeathtouch():
-                        neededDamage = 1
-                    if remainingDamage > 0:
-                        if remainingDamage > neededDamage:
-                            attacker.dealDamage(blocker, neededDamage)
-                            remainingDamage -= neededDamage
-
-                if combatPairings[attacker] != [] and not attacker.hasTrample():
-                    attacker.dealDamage(blocker, remainingDamage)
-
-                else:
-                    attacker.dealDamage(opponent, remainingDamage)
-
-            for blocker in combatPairings[attacker]:
-                if blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    blocker.dealDamage(attacker, blocker.curPower)
-
-        if self.checkSBA():
-            return True
-
-        # - Combat Damage
-        # All the double-strikers and not-first-strikers deal combat damage
-        for attacker in combatPairings:
-
-            if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
-                remainingDamage = attacker.curPower
-
-                for blocker in combatPairings[attacker]:
-                    neededDamage = blocker.curTou - blocker.damage
-                    if attacker.hasDeathtouch():
-                        neededDamage = 1
-                    if remainingDamage > 0:
-                        if remainingDamage > neededDamage:
-                            attacker.dealDamage(blocker, neededDamage)
-                            remainingDamage -= neededDamage
-
-                if combatPairings[attacker] != [] and not attacker.hasTrample():
-                    attacker.dealDamage(blocker, remainingDamage)
-
-                else:
-                    attacker.dealDamage(opponent, remainingDamage)
-
-            for blocker in combatPairings[attacker]:
-                if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    blocker.dealDamage(attacker, blocker.curPower)
-
-        if self.checkSBA():
+        if self.resolveCombat(self.combatPairings):
             return True
 
         # End of Combat
-        for attacker in combatPairings:
+        for attacker in self.combatPairings:
             attacker.attacking = False
-            for blocker in combatPairings[attacker]:
+            for blocker in self.combatPairings[attacker]:
                 blocker.blocking = False
 
         ## Postcombat Main Phase
@@ -224,7 +169,7 @@ class Game:
         print("Postcombat Main Phase")
         print("----------------------------------------------------------")
 
-        if self.mainPhase():
+        if self.mainPhase(2):
             return True
 
         ## End Phase
@@ -249,14 +194,22 @@ class Game:
         return False
 
     # Main phase method. Lets players play cards
-    def mainPhase(self):
+    def mainPhase(self, number):
 
         player = self.activePlayer
 
         if isinstance(player, SearchAgent):
-            state = State(self, [])
+            phase = ''
+            if number == 1:
+                phase = 'First Main'
+            elif number == 2:
+                phase = 'Second Main'
+            state = State(self, phase, [])
             actions = player.breadthFirstSearch(state)
-            for i in range(len(actions) - 1):
+            i = 0
+            action = actions[0]
+            actionName = action[0]
+            while actionName != 'Pass':
                 action = actions[i]
                 card = player.hand[action[0]]
                 self.play(action)
@@ -266,6 +219,15 @@ class Game:
                 player.printMainAction(card, targets)
                 if self.checkSBA():
                     return True
+                i += 1
+                action = actions[i]
+                actionName = action[0]
+            print("actions by search:")
+            print(actions)
+            if len(actions[i:]) > 1:
+                self.attackers = actions[i+1]
+                for i in range(len(self.attackers)):
+                    self.attackers[i] = self.getPermanentFromID(self.attackers[i])
         else:
             action = ['','']
             # Players can play cards until they decide to pass priority
@@ -492,6 +454,76 @@ class Game:
             player.graveyard.append(card)
             return None
 
+    def attack(self, attackers):
+        combatPairings = {}
+        for creature in attackers:
+            creature.attack
+            combatPairings[creature] = []
+        return combatPairings
+
+    def resolveCombat(self, combatPairings):
+        activePlayer = self.activePlayer
+        opponent = self.opponent
+        # - First & Double Strike Damage
+        # All the first-strikers and double-strikers deal first strike damage
+        for attacker in combatPairings:
+            if attacker.hasFirstStrike() or attacker.hasDoubleStrike():
+                remainingDamage = attacker.curPower
+
+                for blocker in combatPairings[attacker]:
+                    neededDamage = blocker.curTou - blocker.damage
+                    if attacker.hasDeathtouch():
+                        neededDamage = 1
+                    if remainingDamage > 0:
+                        if remainingDamage > neededDamage:
+                            attacker.dealDamage(blocker, neededDamage)
+                            remainingDamage -= neededDamage
+
+                if combatPairings[attacker] == []:
+                    attacker.dealDamage(opponent, remainingDamage)
+
+                elif attacker.hasTrample():
+                    if remainingDamage > 0:
+                        attacker.dealDamage(opponent, remainingDamage)
+
+            for blocker in combatPairings[attacker]:
+                if blocker.hasFirstStrike() or blocker.hasDoubleStrike():
+                    blocker.dealDamage(attacker, blocker.curPower)
+
+        if self.checkSBA():
+            return True
+
+        # - Combat Damage
+        # All the double-strikers and not-first-strikers deal combat damage
+        for attacker in combatPairings:
+            if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
+                remainingDamage = attacker.curPower
+
+                for blocker in combatPairings[attacker]:
+                    neededDamage = blocker.curTou - blocker.damage
+                    if attacker.hasDeathtouch():
+                        neededDamage = 1
+                    if remainingDamage > 0:
+                        if remainingDamage > neededDamage:
+                            attacker.dealDamage(blocker, neededDamage)
+                            remainingDamage -= neededDamage
+
+                if combatPairings[attacker] == []:
+                    attacker.dealDamage(opponent, remainingDamage)
+
+                elif attacker.hasTrample():
+                    if remainingDamage > 0:
+                        attacker.dealDamage(opponent, remainingDamage)
+
+            for blocker in combatPairings[attacker]:
+                if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
+                    blocker.dealDamage(attacker, blocker.curPower)
+
+        if self.checkSBA():
+            return True
+
+        return False
+
     def newPermanentID(self):
         self.permanentID += 1
         return self.permanentID
@@ -528,6 +560,15 @@ class Game:
         print("Permanent with ID " + str(permanentID) + " was not found.")
         return None
 
+    def combatPairingsFromIDs(self, combatPairingsIDs):
+        combatPairings = {}
+        for attID in combatPairingsIDs:
+            attacker = self.getPermanentFromID(attID)
+            combatPairings[attacker] = []
+            for blkID in combatPairingsIDs:
+                blocker = getPermanentFromID(blkID)
+                combatPairings[attacker].append(blocker)
+        return combatPairings
 
     def printGameState(self):
         print("Active Player: " + self.activePlayer.name + " - " + str(self.activePlayer.life) + " life")
@@ -543,9 +584,7 @@ class Game:
             print(creature.stats())
 
     def getAttackingActions(self):
-
         player = self.activePlayer
-
         possibleAttackers = [creature for creature in player.creatures if creature.canAttack()]
         return utils.listArrangements(possibleAttackers)
 
@@ -560,6 +599,8 @@ class Game:
                 if creature.canBlock(attacker):
                     possibleBlocks.append(attacker)
             possibleBlocksList.append(possibleBlocks)
+        if possibleBlocksList == []:
+            possibleBlocksList = [[]]
 
         return utils.listCombinations(possibleBlocksList)
 
@@ -608,8 +649,9 @@ class Game:
 
 class State:
 
-    def __init__(self, game, actionPath):
+    def __init__(self, game, phase, actionPath):
         self.game = game
+        self.phase = phase
         self.actionPath = actionPath
         if len(actionPath) > 0:
             self.parentAction = actionPath[-1]
@@ -629,20 +671,110 @@ class State:
             self.opponentPower += creature.curPower
 
     def isTerminal(self):
-        if self.parentAction == None:
-            return False
-        if self.parentAction[0] == 'Pass' or self.opponentLifeTotal <= 0 or self.ownLifeTotal <= 0:
+        if self.phase == 'End':
+            return True
+        if self.opponentLifeTotal <= 0 or self.ownLifeTotal <= 0:
             return True
         return False
 
     def getChildren(self):
         children = []
-        for action in self.game.getMainActions():
-            game = self.game
-            if action[0] != 'Pass':
-                game = c.deepcopy(self.game)
-                game.play(action)
-            children.append(State(game, self.actionPath + [action]))
+        if self.phase == 'First Main' or self.phase == 'Second Main':
+            for action in self.game.getMainActions():
+                game = self.game
+                nextPhase = ''
+                if action[0] != 'Pass':
+                    game = c.deepcopy(self.game)
+                    game.play(action)
+                    nextPhase = self.phase
+                elif self.phase == 'First Main':
+                    nextPhase = 'Combat'
+                elif self.phase == 'Second Main':
+                    nextPhase = 'End'
+                children.append(State(game, nextPhase, self.actionPath + [action]))
+        else:
+            for attackers in atkConfigs:
+                attackingGame = c.deepcopy(self.game)
+                worstCasePairings = self.game.activePlayer
+
+            peaceState = State(self.game, 'Second Main', self.actionPath + [[],[]])
+            bestWorstState = peaceState
+            bestWorstReward = bestWorstState.getReward()
+            atkConfigs = self.game.getAttackingActions()
+
+            # print("configs:" + str(atkConfigs))
+            for attackers in atkConfigs:
+                # print("attackers: ")
+                attackingGame = c.deepcopy(self.game)
+                attackingGame.combatPairings = attackingGame.attack(attackers)
+
+                atkIDs = []
+                for attacker in attackers:
+                    atkIDs.append(attacker.ID)
+                minState = peaceState
+                minReward = 100
+                blockActions = self.game.getBlockingActions(attackers)
+                # print("Possible blocks:")
+                # for action in blockActions:
+                #     print("-" + str(action))
+                for blocks in blockActions:
+                    # print("blocks: ")
+                    # print(blocks)
+                    blockingGame = c.deepcopy(attackingGame)
+                    curPairing = blockingGame.combatPairings
+                    # fake declare blockers
+                    # for i in range(len(blocks)):
+                    #     creature = blockingGame.opponent.creatures[i]
+                    #     if isinstance(blocks[i], Creature):
+                    #         curPairing[blocks[i]].append(creature)
+                    listOfPairings = utils.intraPermutations(curPairing)
+                    maxPairingReward = -100
+                    bestPairingState = peaceState
+                    # determine best pairing for configuration of blockers
+                    # print("list of pairings: ")
+                    # print(listOfPairings)
+
+                    for pairing in listOfPairings:
+                        newGame = c.deepcopy(blockingGame)
+
+                        newGame.combatPairings = {}
+                        for attacker in pairing:
+                            newAttacker = newGame.getPermanentFromID(attacker.ID)
+                            newGame.combatPairings[newAttacker] = []
+                            for blocker in pairing[attacker]:
+                                newBlocker = newGame.getPermanentFromID(blocker.ID)
+                                newGame.combatPairings[newAttacker].append(blocker)
+
+                        # print(newGame.combatPairings)
+                        # print(newGame.activePlayer.creatures)
+                        # print(newGame.opponent.creatures)
+                        # print("\n Pre combat")
+                        # newGame.printGameState()
+                        newGame.resolveCombat(newGame.combatPairings)
+                        # print("\n After combat")
+                        # newGame.printGameState()
+                        newState = State(newGame, 'Second Main', self.actionPath + [atkIDs, pairing])
+                        pairingReward = newState.getReward()
+                        # print("reward: " + str(pairingReward))
+                        if pairingReward > maxPairingReward or bestPairingState is None:
+                            maxPairingReward = pairingReward
+                            # print("best pairing state:")
+                            # print(newState)
+                            bestPairingState = newState
+                    if maxPairingReward < minReward:
+                        minState = bestPairingState
+                        # print("worst blocker situation:")
+                        # print(bestPairingState)
+                        minReward = maxPairingReward
+
+                if minReward > bestWorstReward:
+                    bestWorstReward = minReward
+                    # print("best worst situation:")
+                    # print(worstBlockerState)
+                    bestWorstState = minState
+
+            children.append(bestWorstState)
+
         return children
 
     def getReward(self):
