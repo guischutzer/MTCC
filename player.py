@@ -517,23 +517,26 @@ class SearchAgent(RandomAgent):
 
     def chooseBlockers(self, legalActions, combatPairings, state):
         maxReward = -100
-        maxRewardPairings = combatPairings
+        maxRewardPairingsIDs = {}
+        for attacker in combatPairings:
+            maxRewardPairings[attacker.ID] = []
+
         for blocks in legalActions:
             newGame = c.deepcopy(state.game)
+            combatPairings = {}
             for i in range(len(blocks)):
                 blocker = newGame.opponent.creatures[i]
                 attacker = blocks[i]
                 combatPairings[attacker].append(blocker)
-            pairingIDs = self.assignBlockOrder(combatPairings, blocks, newGame)
-            pairing = newGame.combatPairingsFromIDs(pairingIDs)
+            pairingIDs = self.chooseBlockOrder(combatPairings, blocks, newGame)
             newGame.resolveCombat(pairing)
             newState = State(newGame, 'Combat', None)
             reward = -newState.getReward()
             if reward > maxReward:
-                maxRewardPairings = pairingIDs
+                maxRewardPairingsIDs = pairingIDs
                 maxReward = reward
 
-        return maxRewardPairings
+        return maxRewardPairingsIDs
 
     def declareBlockers(self, legalActions, combatPairings, state):
 
@@ -554,7 +557,7 @@ class SearchAgent(RandomAgent):
             print("")
         return finalPairings
 
-    def assignBlockOrder(self, combatPairings, blocks, game):
+    def assignBlockOrder(self, combatPairings, game):
 
         combatPairings = self.chooseBlockOrder(self, combatPairings, blocks, game)
 
@@ -569,7 +572,7 @@ class SearchAgent(RandomAgent):
 
         return combatPairings
 
-    def chooseBlockOrder(self, combatPairings, blocks, game):
+    def chooseBlockOrder(self, combatPairings, game):
 
         listOfPairings = utils.intraPermutations(combatPairings)
         maxReward = None
@@ -597,10 +600,27 @@ class SearchAgent(RandomAgent):
 
     def getChildren(self, state):
 
-        if state != 'Combat':
-            return state.getChildren()
+        if state == 'Combat':
+            return self.combatMinMax(state)
 
-        return self.combatMaxMin(state)
+        return state.getChildren()
+
+    def combatMinMax(self, state):
+        children = []
+        game = state.game
+        attackConfigurations = game.getAttackingActions()
+        for attackers in attackConfigurations:
+            newGame = c.deepcopy(game)
+            combatPairings = newGame.attack(attackers)
+            legalBlocks = newGame.getBlockingActions()
+            combatPairingsIDs = self.chooseBlockers(legalBlocks, combatPairings, state)
+            combatPairings = newGame.combatPairingsIDs(combatPairingsIDs)
+            newGame.resolveCombat(combatPairings)
+            attIDs = []
+            for attacker in attackers:
+                attIDs.append[attacker.ID]
+            children.append(State(newGame, 'Second Main', self.actionPath + [attIDs]))
+        return children
 
     def breadthFirstSearch(self, startState):
 
