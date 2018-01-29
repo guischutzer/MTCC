@@ -206,7 +206,7 @@ class Player:
         return combatPairings
 
 
-    def declareBlockers(self, legalActions, combatPairings):
+    def declareBlockers(self, legalActions, combatPairings, state):
 
         print(self.name + ", declare blockers: ")
         for attacker in combatPairings:
@@ -482,7 +482,7 @@ class RandomAgent(MulliganAgent):
 
         return combatPairings
 
-    def declareBlockers(self, legalActions, combatPairings):
+    def declareBlockers(self, legalActions, combatPairings, state):
 
         if len(legalActions) == 0:
             return {}
@@ -495,7 +495,7 @@ class RandomAgent(MulliganAgent):
         for i in range(len(self.creatures)):
             blockingCreature = self.creatures[i]
             blockedCreature = action[i]
-            if blockedCreature != []:
+            if blockedCreature != None:
                 noBlocks = False
                 print("")
                 print(" - " + blockingCreature.stats() + " blocking " + blockedCreature.stats(), end='')
@@ -519,7 +519,7 @@ class SearchAgent(RandomAgent):
 
         q = queue.Queue()
         q.put(startState)
-        maxReward = 0
+        maxReward = -100
         actionPath = []
 
         while not q.empty():
@@ -527,13 +527,147 @@ class SearchAgent(RandomAgent):
             if state.isTerminal():
                 reward = state.getReward()
                 if reward >= maxReward:
-                    maxreward = reward
+                    maxReward = reward
                     actionPath = state.getPath()
             else:
                 for s in state.getChildren():
                     q.put(s)
 
         return actionPath
+
+    def chooseBlockers(self, legalActions, combatPairings, state):
+        maxReward = -100
+        maxRewardPairingsIDs = {}
+        for attacker in combatPairings:
+            maxRewardPairingsIDs[attacker.ID] = []
+
+        for blocks in legalActions:
+            newGame = c.deepcopy(state.game)
+            pairingsIDs = {}
+            for attacker in combatPairings:
+                pairingsIDs[attacker.ID] = []
+            for i in range(len(blocks)):
+                blocker = newGame.opponent.creatures[i]
+                blockedCreature = blocks[i]
+                if blockedCreature != None:
+                    pairingsIDs[blockedCreature.ID].append(blocker.ID)
+            pairingsIDs = self.chooseBlockOrder(pairingsIDs, newGame)
+            pairings = newGame.getCombatPairingsFromIDs(pairingsIDs)
+            newGame.resolveCombat(pairings)
+            newState = State(newGame, [])
+            reward = -newState.getReward()
+            if reward > maxReward:
+                maxRewardPairingsIDs = pairingsIDs
+                maxReward = reward
+        return maxRewardPairingsIDs
+
+    def chooseBlockOrder(self, combatPairingsIDs, game):
+
+        listOfPairings = utils.intraPermutations(combatPairingsIDs)
+        maxReward = None
+        assignedPairingsIDs = {}
+        for pairingsIDs in listOfPairings:
+            newGame = c.deepcopy(game)
+            newPairings = {}
+            newPairingsIDs = {}
+            for attID in pairingsIDs:
+                newAttacker = newGame.getPermanentFromID(attID)
+                newPairings[newAttacker] = []
+                newPairingsIDs[attID] = []
+                for blkID in pairingsIDs[attID]:
+                    newBlocker = newGame.getPermanentFromID(blkID)
+                    newPairingsIDs[attID].append(blkID)
+                    newPairings[newAttacker].append(newBlocker)
+            newGame.resolveCombat(newPairings)
+            state = State(newGame, [])
+            reward = state.getReward()
+            if maxReward == None or reward >= maxReward:
+                maxReward = reward
+                assignedPairingsIDs = newPairingsIDs
+
+        return assignedPairingsIDs
+
+    def declareBlockers(self, legalActions, combatPairings, state):
+
+        pairingsIDs = self.chooseBlockers(legalActions, combatPairings, state)
+
+        noBlocks = True
+        print("Agent " + self.name + " has declared ", end='')
+        finalPairings = state.game.getCombatPairingsFromIDs(pairingsIDs)
+        for attacker in finalPairings:
+            for blocker in finalPairings[attacker]:
+                noBlocks = False
+                print("")
+                print(" - " + blocker.stats() + " blocking " + attacker.stats(), end='')
+
+        if noBlocks:
+            print("no blockers.")
+        else:
+            print("")
+        return finalPairings
+
+class State:
+
+    def __init__(self, game, actionPath):
+        self.game = game
+        self.actionPath = actionPath
+        if len(actionPath) > 0:
+            self.parentAction = actionPath[-1]
+        else:
+            self.parentAction = None
+        self.ownLifeTotal = game.activePlayer.life
+        self.opponentLifeTotal = game.opponent.life
+        self.ownPower = 0
+        self.opponentPower = 0
+        self.landNumber = len(game.activePlayer.lands)
+        self.handSize = len(game.activePlayer.hand)
+        self.winReward = 100
+        self.lossReward = -100
+        for creature in game.activePlayer.creatures:
+            self.ownPower += creature.curPower
+        for creature in game.opponent.creatures:
+            self.opponentPower += creature.curPower
+
+    def isTerminal(self):
+        if self.parentAction == None:
+            return False
+        if self.parentAction[0] == 'Pass' or self.opponentLifeTotal <= 0 or self.ownLifeTotal <= 0:
+            return True
+        return False
+
+    def getChildren(self):
+        children = []
+        for action in self.game.getMainActions():
+            game = self.game
+            if action[0] != 'Pass':
+                game = c.deepcopy(self.game)
+                game.play(action)
+                game.checkSBA()
+            children.append(State(game, self.actionPath + [action]))
+        return children
+
+    def getReward(self):
+        if self.opponentLifeTotal <= 0:
+            return self.winReward
+        if self.ownLifeTotal <= 0:
+            return self.lossReward
+        # print(self)
+        reward = (self.ownLifeTotal - self.opponentLifeTotal)/4 + self.ownPower - self.opponentPower + 1.1*self.landNumber + self.handSize
+        return reward
+
+    def getPath(self):
+        return self.actionPath
+
+    def __str__(self):
+        s = "own life: " + str(self.ownLifeTotal)
+        s += "\nopp life: " + str(self.opponentLifeTotal)
+        s += "\nown power: " + str(self.ownPower)
+        s += "\nopp power: " + str(self.opponentPower)
+        s += "\naction path: "
+        for action in self.actionPath:
+            s += "\n" + str(action)
+        return s
+
 
 
 def isLegalAction(card, legalActions):
