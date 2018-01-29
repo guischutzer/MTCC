@@ -93,6 +93,7 @@ class Game:
         opponent = self.opponent
 
         activePlayer.landDrop = False
+        self.attackers = None
 
         ## Beggining Phase
         # Untap - untap permanents of active player
@@ -106,6 +107,8 @@ class Game:
         for land in activePlayer.lands:
             land.untap()
             land.removeSickness()
+
+        self.printGameState()
 
         # Upkeep
         if self.checkSBA():
@@ -138,13 +141,10 @@ class Game:
         # [creature1 - attacking or not, creature2 - attacking or not, ...]
         legalActions = self.getAttackingActions()
         # Active player chooses how creatures attack
-        attackers = activePlayer.declareAttackers(legalActions)
+        if self.attackers == None:
+            self.attackers = activePlayer.declareAttackers(legalActions)
 
-        # combatPairings pair attackers with their assigned blockers
-        combatPairings = {}
-        for creature in attackers:
-            creature.attack()
-            combatPairings[creature] = []
+        combatPairings = self.attack(self.attackers)
 
         # Declare Blockers - Not Active Player
 
@@ -152,8 +152,8 @@ class Game:
         # arrangements possible for each of its creatures to block
         # the opponent's attacking creatures. Each type of player/agent
         # then chooses the action differently
-        legalActions = self.getBlockingActions(attackers)
-        state = State(self, [])
+        legalActions = self.getBlockingActions(self.attackers)
+        state = State(self, 'Combat', [])
         combatPairings = opponent.declareBlockers(legalActions, combatPairings, state)
 
         ## Choosing Block Order - Active Player
@@ -201,11 +201,14 @@ class Game:
             if number == 1:
                 phase = 'First Main'
             else:
-                phase == 'Second Main'
-            state = State(self, [])
-            actions = player.breadthFirstSearch(state)
-            for i in range(len(actions) - 1):
-                action = actions[i]
+                phase = 'Second Main'
+            state = State(self, phase, [])
+            actionPath = player.breadthFirstSearch(state)
+            print(actionPath)
+            action = actionPath[0]
+            i = 0
+            while action[0] != 'Pass':
+                print(action)
                 card = player.hand[action[0]]
                 self.play(action)
                 targets = []
@@ -214,6 +217,11 @@ class Game:
                 player.printMainAction(card, targets)
                 if self.checkSBA():
                     return True
+                i += 1
+                action = actionPath[i]
+            if phase == 'First main':
+                self.attackers = actionPath[i+1]
+
         else:
             action = ['','']
             # Players can play cards until they decide to pass priority
@@ -438,6 +446,14 @@ class Game:
             card.effect(targets)
             player.graveyard.append(card)
             return None
+
+    def attack(self, attackers):
+        # combatPairings pair attackers with their assigned blockers
+        combatPairings = {}
+        for creature in attackers:
+            creature.attack()
+            combatPairings[creature] = []
+        return combatPairings
 
     def resolveCombat(self, combatPairings):
         activePlayer = self.activePlayer

@@ -558,7 +558,7 @@ class SearchAgent(RandomAgent):
             pairingsIDs = self.chooseBlockOrder(pairingsIDs, newGame)
             pairings = newGame.getCombatPairingsFromIDs(pairingsIDs)
             newGame.resolveCombat(pairings)
-            newState = State(newGame, [])
+            newState = State(newGame, 'Combat', [])
             reward = -newState.getReward()
             if reward > maxReward:
                 maxRewardPairingsIDs = pairingsIDs
@@ -583,7 +583,7 @@ class SearchAgent(RandomAgent):
                     newPairingsIDs[attID].append(blkID)
                     newPairings[newAttacker].append(newBlocker)
             newGame.resolveCombat(newPairings)
-            state = State(newGame, [])
+            state = State(newGame, 'Combat', [])
             reward = state.getReward()
             if maxReward == None or reward >= maxReward:
                 maxReward = reward
@@ -630,15 +630,17 @@ class SearchAgent(RandomAgent):
                     i += 1
 
         return combatPairings
+
 class State:
 
-    def __init__(self, game, actionPath):
+    def __init__(self, game, phase, actionPath):
         self.game = game
+        self.phase = phase
         self.actionPath = actionPath
         if len(actionPath) > 0:
             self.parentAction = actionPath[-1]
         else:
-            self.parentAction = None
+            self.parentAction = [None]
         self.ownLifeTotal = game.activePlayer.life
         self.opponentLifeTotal = game.opponent.life
         self.ownPower = 0
@@ -653,21 +655,48 @@ class State:
             self.opponentPower += creature.curPower
 
     def isTerminal(self):
-        if self.parentAction == None:
-            return False
-        if self.parentAction[0] == 'Pass' or self.opponentLifeTotal <= 0 or self.ownLifeTotal <= 0:
+        if self.phase == 'End':
+            return True
+        if self.opponentLifeTotal <= 0 or self.ownLifeTotal <= 0:
             return True
         return False
 
     def getChildren(self):
         children = []
-        for action in self.game.getMainActions():
-            game = self.game
-            if action[0] != 'Pass':
-                game = c.deepcopy(self.game)
-                game.play(action)
-                game.checkSBA()
-            children.append(State(game, self.actionPath + [action]))
+        if self.phase == 'First Main' or self.phase == 'Second Main':
+            for action in self.game.getMainActions():
+                game = self.game
+                nextPhase = self.phase
+                if action[0] != 'Pass':
+                    game = c.deepcopy(self.game)
+                    game.play(action)
+                    game.checkSBA()
+                elif self.phase == 'First Main':
+                    nextPhase = 'Combat'
+                elif self.phase == 'Second Main':
+                    nextPhase = 'End'
+                children.append(State(game, nextPhase, self.actionPath + [action]))
+        else:
+            children = self.combatMaxMin()
+        return children
+
+    def combatMaxMin(self):
+        children = []
+        game = self.game
+        attackConfigurations = game.getAttackingActions()
+        noAttacksState = State(game, 'Second Main', self.actionPath + [])
+        children.append(noAttacksState)
+        for attackers in attackConfigurations:
+            newGame = c.deepcopy(game)
+            combatPairings = newGame.attack(attackers)
+            legalBlocks = newGame.getBlockingActions(attackers)
+            combatPairingsIDs = newGame.activePlayer.chooseBlockers(legalBlocks, combatPairings, self)
+            combatPairings = newGame.getCombatPairingsFromIDs(combatPairingsIDs)
+            newGame.resolveCombat(combatPairings)
+            attIDs = []
+            for attacker in attackers:
+                attIDs.append(attacker.ID)
+            children.append(State(newGame, 'Second Main', self.actionPath + [attIDs]))
         return children
 
     def getReward(self):
@@ -675,7 +704,6 @@ class State:
             return self.winReward
         if self.ownLifeTotal <= 0:
             return self.lossReward
-        # print(self)
         reward = (self.ownLifeTotal - self.opponentLifeTotal)/4 + self.ownPower - self.opponentPower + 1.1*self.landNumber + self.handSize
         return reward
 
@@ -687,9 +715,7 @@ class State:
         s += "\nopp life: " + str(self.opponentLifeTotal)
         s += "\nown power: " + str(self.ownPower)
         s += "\nopp power: " + str(self.opponentPower)
-        s += "\naction path: "
-        for action in self.actionPath:
-            s += "\n" + str(action)
+        s += "\naction path: " + str(self.actionPath)
         return s
 
 
