@@ -139,6 +139,7 @@ class Game:
             self.attackers = activePlayer.declareAttackers(legalActions)
         # combatPairings pair attackers with their assigned blockers
         self.combatPairings = self.attack(self.attackers)
+        print(self.combatPairings)
 
         # Declare Blockers - Not Active Player
 
@@ -152,7 +153,7 @@ class Game:
 
 
         ## Choosing Block Order - Active Player
-        self.combatPairings = activePlayer.assignBlockOrder(self.combatPairings)
+        self.combatPairings = activePlayer.assignBlockOrder(self.combatPairings, self)
 
         # Combat Damage
         if self.resolveCombat(self.combatPairings):
@@ -205,12 +206,12 @@ class Game:
             elif number == 2:
                 phase = 'Second Main'
             state = State(self, phase, [])
-            actions = player.breadthFirstSearch(state)
+            actionPath = player.breadthFirstSearch(state)
             i = 0
-            action = actions[0]
+            print(actionPath)
+            action = actionPath[0]
             actionName = action[0]
             while actionName != 'Pass':
-                action = actions[i]
                 card = player.hand[action[0]]
                 self.play(action)
                 targets = []
@@ -220,14 +221,17 @@ class Game:
                 if self.checkSBA():
                     return True
                 i += 1
-                action = actions[i]
+                action = actionPath[i]
                 actionName = action[0]
             print("actions by search:")
-            print(actions)
-            if len(actions[i:]) > 1:
-                self.attackers = actions[i+1]
+            print(actionPath)
+            if len(actionPath[i:]) > 1:
+                self.attackers = actionPath[i+1]
+                print("attackers:")
+                print(self.attackers)
                 for i in range(len(self.attackers)):
                     self.attackers[i] = self.getPermanentFromID(self.attackers[i])
+                print(self.attackers)
         else:
             action = ['','']
             # Players can play cards until they decide to pass priority
@@ -455,13 +459,23 @@ class Game:
             return None
 
     def attack(self, attackers):
+        # self.printGameState()
         combatPairings = {}
+        # print("Active player's creatures' IDs: ", end='')
+        # for creature in self.activePlayer.creatures:
+        #     print(str(creature.ID) + " ", end='')
+        # print("")
+        # print("Opponent's creatures' IDs: ", end='')
+        # for creature in self.opponent.creatures:
+        #     print(str(creature.ID) + " ", end='')
+        # print("")
         for creature in attackers:
-            creature.attack
+            creature.attack()
             combatPairings[creature] = []
         return combatPairings
 
     def resolveCombat(self, combatPairings):
+        print(combatPairings)
         activePlayer = self.activePlayer
         opponent = self.opponent
         # - First & Double Strike Damage
@@ -566,7 +580,7 @@ class Game:
             attacker = self.getPermanentFromID(attID)
             combatPairings[attacker] = []
             for blkID in combatPairingsIDs:
-                blocker = getPermanentFromID(blkID)
+                blocker = self.getPermanentFromID(blkID)
                 combatPairings[attacker].append(blocker)
         return combatPairings
 
@@ -646,160 +660,6 @@ class Game:
         command = "card = " + classname + "(owner)"
         exec(command, globals(), variables)
         return variables['card']
-
-class State:
-
-    def __init__(self, game, phase, actionPath):
-        self.game = game
-        self.phase = phase
-        self.actionPath = actionPath
-        if len(actionPath) > 0:
-            self.parentAction = actionPath[-1]
-        else:
-            self.parentAction = None
-        self.ownLifeTotal = game.activePlayer.life
-        self.opponentLifeTotal = game.opponent.life
-        self.ownPower = 0
-        self.opponentPower = 0
-        self.landNumber = len(game.activePlayer.lands)
-        self.handSize = len(game.activePlayer.hand)
-        self.winReward = 100
-        self.lossReward = -100
-        for creature in game.activePlayer.creatures:
-            self.ownPower += creature.curPower
-        for creature in game.opponent.creatures:
-            self.opponentPower += creature.curPower
-
-    def isTerminal(self):
-        if self.phase == 'End':
-            return True
-        if self.opponentLifeTotal <= 0 or self.ownLifeTotal <= 0:
-            return True
-        return False
-
-    def getChildren(self):
-        children = []
-        if self.phase == 'First Main' or self.phase == 'Second Main':
-            for action in self.game.getMainActions():
-                game = self.game
-                nextPhase = ''
-                if action[0] != 'Pass':
-                    game = c.deepcopy(self.game)
-                    game.play(action)
-                    nextPhase = self.phase
-                elif self.phase == 'First Main':
-                    nextPhase = 'Combat'
-                elif self.phase == 'Second Main':
-                    nextPhase = 'End'
-                children.append(State(game, nextPhase, self.actionPath + [action]))
-        else:
-            for attackers in atkConfigs:
-                attackingGame = c.deepcopy(self.game)
-                worstCasePairings = self.game.activePlayer
-
-            peaceState = State(self.game, 'Second Main', self.actionPath + [[],[]])
-            bestWorstState = peaceState
-            bestWorstReward = bestWorstState.getReward()
-            atkConfigs = self.game.getAttackingActions()
-
-            # print("configs:" + str(atkConfigs))
-            for attackers in atkConfigs:
-                # print("attackers: ")
-                attackingGame = c.deepcopy(self.game)
-                attackingGame.combatPairings = attackingGame.attack(attackers)
-
-                atkIDs = []
-                for attacker in attackers:
-                    atkIDs.append(attacker.ID)
-                minState = peaceState
-                minReward = 100
-                blockActions = self.game.getBlockingActions(attackers)
-                # print("Possible blocks:")
-                # for action in blockActions:
-                #     print("-" + str(action))
-                for blocks in blockActions:
-                    # print("blocks: ")
-                    # print(blocks)
-                    blockingGame = c.deepcopy(attackingGame)
-                    curPairing = blockingGame.combatPairings
-                    # fake declare blockers
-                    # for i in range(len(blocks)):
-                    #     creature = blockingGame.opponent.creatures[i]
-                    #     if isinstance(blocks[i], Creature):
-                    #         curPairing[blocks[i]].append(creature)
-                    listOfPairings = utils.intraPermutations(curPairing)
-                    maxPairingReward = -100
-                    bestPairingState = peaceState
-                    # determine best pairing for configuration of blockers
-                    # print("list of pairings: ")
-                    # print(listOfPairings)
-
-                    for pairing in listOfPairings:
-                        newGame = c.deepcopy(blockingGame)
-
-                        newGame.combatPairings = {}
-                        for attacker in pairing:
-                            newAttacker = newGame.getPermanentFromID(attacker.ID)
-                            newGame.combatPairings[newAttacker] = []
-                            for blocker in pairing[attacker]:
-                                newBlocker = newGame.getPermanentFromID(blocker.ID)
-                                newGame.combatPairings[newAttacker].append(blocker)
-
-                        # print(newGame.combatPairings)
-                        # print(newGame.activePlayer.creatures)
-                        # print(newGame.opponent.creatures)
-                        # print("\n Pre combat")
-                        # newGame.printGameState()
-                        newGame.resolveCombat(newGame.combatPairings)
-                        # print("\n After combat")
-                        # newGame.printGameState()
-                        newState = State(newGame, 'Second Main', self.actionPath + [atkIDs, pairing])
-                        pairingReward = newState.getReward()
-                        # print("reward: " + str(pairingReward))
-                        if pairingReward > maxPairingReward or bestPairingState is None:
-                            maxPairingReward = pairingReward
-                            # print("best pairing state:")
-                            # print(newState)
-                            bestPairingState = newState
-                    if maxPairingReward < minReward:
-                        minState = bestPairingState
-                        # print("worst blocker situation:")
-                        # print(bestPairingState)
-                        minReward = maxPairingReward
-
-                if minReward > bestWorstReward:
-                    bestWorstReward = minReward
-                    # print("best worst situation:")
-                    # print(worstBlockerState)
-                    bestWorstState = minState
-
-            children.append(bestWorstState)
-
-        return children
-
-    def getReward(self):
-        if self.opponentLifeTotal <= 0:
-            return self.winReward
-        if self.ownLifeTotal <= 0:
-            return self.lossReward
-        # print(self)
-        reward = (self.ownLifeTotal - self.opponentLifeTotal)/4 + self.ownPower - self.opponentPower + 1.1*self.landNumber + self.handSize
-        # print("Reward: " + str(reward))
-        return reward
-
-    def getPath(self):
-        return self.actionPath
-
-    def __str__(self):
-        s = "own life: " + str(self.ownLifeTotal)
-        s += "\nopp life: " + str(self.opponentLifeTotal)
-        s += "\nown power: " + str(self.ownPower)
-        s += "\nopp power: " + str(self.opponentPower)
-        s += "\naction path: "
-        for action in self.actionPath:
-            s += "\n" + str(action)
-        return s
-
 
 parser = argparse.ArgumentParser(description='Magic: the Gathering AI utilitary')
 parser.add_argument("-a1", "--agent1",
