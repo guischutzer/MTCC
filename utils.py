@@ -76,7 +76,6 @@ def intraPermutations(d):
             dictList.append(dictFromLists)
     return dictList
 
-
 def getOrdinal(number):
     return ordinals[number]
 

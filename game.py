@@ -23,20 +23,20 @@ class Game:
         if agent1 is None:
             self.player_1 = Player(0)
         elif agent1 == "random" or agent1 == "Random":
-            self.player_1 = RandomAgent(0, actPlayerID is 0, verbosity)
+            self.player_1 = RandomAgent(0, actPlayerID == 0, verbosity)
         elif agent1 == "search" or agent1 == "Search":
-            self.player_1 = SearchAgent(0, actPlayerID is 0, verbosity)
+            self.player_1 = SearchAgent(0, actPlayerID == 0, verbosity)
         else:
-            self.player_1 = MulliganAgent(0, actPlayerID is 0, verbosity)
+            self.player_1 = MulliganAgent(0, actPlayerID == 0, verbosity)
 
         if agent2 is None:
             self.player_2 = Player(-1)
         elif agent2 == "random" or agent2 == "Random":
-            self.player_2 = RandomAgent(-1, actPlayerID is -1, verbosity)
+            self.player_2 = RandomAgent(-1, actPlayerID == -1, verbosity)
         elif agent2 == "search" or agent2 == "Search":
-            self.player_2 = SearchAgent(-1, actPlayerID is -1, verbosity)
+            self.player_2 = SearchAgent(-1, actPlayerID == -1, verbosity)
         else:
-            self.player_2 = MulliganAgent(-1, actPlayerID is -1, verbosity)
+            self.player_2 = MulliganAgent(-1, actPlayerID == -1, verbosity)
 
         if choosename:
             name1 = input("Choose a name for Player 1: ")
@@ -88,7 +88,6 @@ class Game:
     # with events like a normal Magic turn
     def turnRoutine(self, tNumber):
 
-
         activePlayer = self.activePlayer
         opponent = self.opponent
 
@@ -139,11 +138,9 @@ class Game:
 
         # Get all legal actions in the form of:
         # [creature1 - attacking or not, creature2 - attacking or not, ...]
-        legalActions = self.getAttackingActions()
         # Active player chooses how creatures attack
         if self.attackers == None:
             self.attackers = activePlayer.declareAttackers(legalActions)
-
         combatPairings = self.attack(self.attackers)
 
         # Declare Blockers - Not Active Player
@@ -584,9 +581,7 @@ class Game:
             print(creature.stats())
 
     def getAttackingActions(self):
-
         player = self.activePlayer
-
         possibleAttackers = [creature for creature in player.creatures if creature.canAttack()]
         return utils.listArrangements(possibleAttackers)
 
@@ -601,6 +596,8 @@ class Game:
                 if creature.canBlock(attacker):
                     possibleBlocks.append(attacker)
             possibleBlocksList.append(possibleBlocks)
+        if possibleBlocksList == []:
+            possibleBlocksList = [[]]
 
         return utils.listCombinations(possibleBlocksList)
 
@@ -646,8 +643,6 @@ class Game:
         command = "card = " + classname + "(owner)"
         exec(command, globals(), variables)
         return variables['card']
-
-
 
 parser = argparse.ArgumentParser(description='Magic: the Gathering AI utilitary')
 parser.add_argument("-a1", "--agent1",
