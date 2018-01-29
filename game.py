@@ -79,6 +79,10 @@ class Game:
             endGame = self.turnRoutine(n)
             self.changeActivePlayer()
 
+        if self.player_1.hasLost():
+            print("Player " + self.player_1.name + " has lost the game.")
+        if self.player_2.hasLost():
+            print("Player " + self.player_2.name + " has lost the game.")
     # turnRoutine(tNumber):
     # calls the necessary methods in the correct order and deals
     # with events like a normal Magic turn
@@ -119,7 +123,7 @@ class Game:
         print("----------------------------------------------------------")
 
         # Main Phase method
-        if self.mainPhase():
+        if self.mainPhase(1):
             return True
 
         ## Combat Phase
@@ -153,7 +157,7 @@ class Game:
         combatPairings = opponent.declareBlockers(legalActions, combatPairings, state)
 
         ## Choosing Block Order - Active Player
-        combatPairings = activePlayer.assignBlockOrder(combatPairings)
+        combatPairings = activePlayer.assignBlockOrder(combatPairings, self)
 
         if self.resolveCombat(combatPairings):
             return True
@@ -163,7 +167,7 @@ class Game:
         print("Postcombat Main Phase")
         print("----------------------------------------------------------")
 
-        if self.mainPhase():
+        if self.mainPhase(2):
             return True
 
         ## End Phase
@@ -188,11 +192,16 @@ class Game:
         return False
 
     # Main phase method. Lets players play cards
-    def mainPhase(self):
+    def mainPhase(self, number):
 
         player = self.activePlayer
 
         if isinstance(player, SearchAgent):
+            phase = ''
+            if number == 1:
+                phase = 'First Main'
+            else:
+                phase == 'Second Main'
             state = State(self, [])
             actions = player.breadthFirstSearch(state)
             for i in range(len(actions) - 1):
@@ -369,11 +378,6 @@ class Game:
 
     def checkSBA(self):
         for player in self.activePlayer, self.opponent:
-            if player.life <= 0:
-                player.lose = True
-            if player.lose:
-                print("Player " + player.name + " has lost the game.")
-                return True
 
             for creature in player.creatures:
                 if creature.dealtLethal or creature.destroyed:
@@ -384,6 +388,10 @@ class Game:
                 if land.destroyed:
                     player.lands.remove(land)
                     land.putOnGraveyard()
+            if player.life <= 0:
+                player.lose = True
+            if player.lose:
+                return True
 
         return False
 

@@ -18,6 +18,7 @@ class Player:
         self.graveyard = []
         self.untappedLands = 0
         self.landDrop = False
+        self.lose = False
 
     def rename(self, name):
         self.name = name
@@ -261,6 +262,9 @@ class Player:
                     return False
 
         return True
+
+    def hasLost(self):
+        return self.lose
 
 class MulliganAgent(Player):
 
@@ -606,6 +610,26 @@ class SearchAgent(RandomAgent):
             print("")
         return finalPairings
 
+    def assignBlockOrder(self, combatPairings, game):
+
+        combatPairingsIDs = {}
+        for attacker in combatPairings:
+            combatPairingsIDs[attacker.ID] = []
+            for blocker in combatPairings[attacker]:
+                combatPairingsIDs[attacker.ID].append(blocker.ID)
+
+        combatPairingsIDs = self.chooseBlockOrder(combatPairingsIDs, game)
+
+        combatPairings = game.getCombatPairingsFromIDs(combatPairingsIDs)
+        for attacker in combatPairings:
+            if len(combatPairings[attacker]) > 1:
+                print("Player " + self.name + " blocks " + attacker.stats())
+                i = 1
+                for blocker in combatPairings[attacker]:
+                    print(" - " + utils.getOrdinal(i) + " with " + blocker.stats())
+                    i += 1
+
+        return combatPairings
 class State:
 
     def __init__(self, game, actionPath):
