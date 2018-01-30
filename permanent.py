@@ -22,6 +22,7 @@ class Permanent:
         self.destroyed = True
 
     def putOnGraveyard(self):
+        self.destroyed = True
         self.owner.graveyard.append(self.card)
 
     def isPlayer(self):
@@ -97,10 +98,10 @@ class Creature(Permanent):
 
     def dealDamage(self, target, amount):
         target.takeDamage(amount)
-        if self.hasLifelink() in self.currentAbilities:
+        if self.hasLifelink():
             self.controller.gainLife(amount)
         if self.hasDeathtouch() and inspect.isinstance(target, Creature):
-                target.die()
+                target.destroy()
 
     def takeDamage(self, amount):
         self.damage += amount
@@ -120,7 +121,7 @@ class Creature(Permanent):
 
     def attack(self):
         if "Vigilance" not in self.currentAbilities:
-            self.tapped = True
+            self.tap()
         self.attacking = True
 
     def block(self, attacker):

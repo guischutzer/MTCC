@@ -107,6 +107,8 @@ class Game:
             land.untap()
             land.removeSickness()
 
+        self.printGameState()
+
         # Upkeep
         if self.checkSBA():
             return True
@@ -138,12 +140,17 @@ class Game:
 
         # Declare Attackers - Active Player
 
-        # Get all legal actions in the form of:
-        # [creature1 - attacking or not, creature2 - attacking or not, ...]
         # Active player chooses how creatures attack
         if self.attackers == None:
             legalActions = self.getAttackingActions()
             self.attackers = activePlayer.declareAttackers(legalActions)
+        else:
+            liveAttackers = []
+            for attacker in self.attackers:
+                if not attacker.destroyed:
+                    liveAttackers.append(attacker)
+            self.attackers = liveAttackers
+        print("attackers: " + str(self.attackers))
         combatPairings = self.attack(self.attackers)
         activePlayer.printAttackers(self.attackers)
 
@@ -209,7 +216,6 @@ class Game:
             action = actionPath[0]
             i = 0
             while action[0] != 'Pass':
-                print(action)
                 card = player.hand[action[0]]
                 self.play(action)
                 targets = []
@@ -289,11 +295,6 @@ class Game:
                     action = [i, targetIDs]
                     legalActions.append(action)
 
-        # if player.verbose:
-        #     print("Legal actions:")
-        #     for action in legalActions:
-        #         print(" - " + str(action))
-
         return legalActions
 
     def canTarget(self, player, targets):
@@ -307,28 +308,29 @@ class Game:
                 opponentCreatures.remove(creature)
 
         for target in targets:
-            foundTarget = False
-            if "Player" not in target and "Opponent" not in target:
-                for targetType in target:
-                    if foundTarget:
-                        break
-                    if targetType == "Creature":
-                        if len(ownCreatures) > 0:
-                            ownCreatures.pop()
-                            foundTarget = True
-                        elif len(opponentCreatures) > 0:
-                            opponentCreatures.pop()
-                            foundTarget = True
-                    elif targetType == "OwnCreature":
-                        if len(ownCreatures) > 0:
-                            ownCreatures.pop()
-                            foundTarget = True
-                    elif targetType == "OpponentCreature":
-                        if len(opponentCreatures) > 0:
-                            opponentCreatures.pop()
-                            foundTarget = True
-                if not foundTarget:
-                    return False
+            for targetType in target:
+                foundTarget = False
+                if foundTarget:
+                    break
+                if targetType == "Player" or targetType == "Opponent":
+                    foundTarget = True
+                elif targetType == "Creature":
+                    if len(ownCreatures) > 0:
+                        ownCreatures.pop()
+                        foundTarget = True
+                    elif len(opponentCreatures) > 0:
+                        opponentCreatures.pop()
+                        foundTarget = True
+                elif targetType == "OwnCreature":
+                    if len(ownCreatures) > 0:
+                        ownCreatures.pop()
+                        foundTarget = True
+                elif targetType == "OpponentCreature":
+                    if len(opponentCreatures) > 0:
+                        opponentCreatures.pop()
+                        foundTarget = True
+            if not foundTarget:
+                return False
 
         return True
 
@@ -350,20 +352,21 @@ class Game:
 
         for possibleTarget in card.targets:
             curList = []
-            if "OwnCreature" in possibleTarget:
-                for creature in ownCreatures:
-                    curList.append(creature)
+            for targetType in possibleTarget:
+                if targetType == "OwnCreature":
+                    for creature in ownCreatures:
+                        curList.append(creature)
 
-            if "OpponentCreature" in possibleTarget:
-                for creature in opponentCreatures:
-                    curList.append(creature)
+                if targetType == "OpponentCreature":
+                    for creature in opponentCreatures:
+                        curList.append(creature)
 
-            if "Player" in possibleTarget:
-                curList.append(player)
-                curList.append(opponent)
+                if targetType == "Player":
+                    curList.append(player)
+                    curList.append(opponent)
 
-            if "Opponent" in possibleTarget:
-                curList.append(opponent)
+                if targetType == "Opponent":
+                    curList.append(opponent)
 
             legalTargets.append(curList)
 
@@ -389,8 +392,9 @@ class Game:
 
     def checkSBA(self):
         for player in self.activePlayer, self.opponent:
-
             for creature in player.creatures:
+                if creature.damage >= creature.curTou:
+                    creature.dealtLethal = True
                 if creature.dealtLethal or creature.destroyed:
                     player.creatures.remove(creature)
                     creature.putOnGraveyard()
@@ -437,16 +441,17 @@ class Game:
             for target in targets:
                 for i in range(len(targets)):
                     if targets[i] not in player.creatures + opponent.creatures:
-                        targets[i] = permanent
-                        break
-            card.effect(targets)
+                        if "OwnCreature" in card.targets:
+                            targets[i] = permanent
+                            break
+            card.effect(self, targets)
             return permanent
 
         if card.ctype == "Sorcery":
             targets = []
             for ID in targetIDs:
                 targets.append(self.getPermanentFromID(ID))
-            card.effect(targets)
+            card.effect(self, targets)
             player.graveyard.append(card)
             return None
 
@@ -467,14 +472,22 @@ class Game:
             if attacker.hasFirstStrike() or attacker.hasDoubleStrike():
                 remainingDamage = attacker.curPower
 
-                for blocker in combatPairings[attacker]:
+                for i in range(len(combatPairings[attacker])):
+                    blocker = combatPairings[attacker][i]
                     neededDamage = blocker.curTou - blocker.damage
                     if attacker.hasDeathtouch():
                         neededDamage = 1
                     if remainingDamage > 0:
-                        if remainingDamage > neededDamage:
-                            attacker.dealDamage(blocker, neededDamage)
-                            remainingDamage -= neededDamage
+                        if remainingDamage >= neededDamage:
+                            if len(combatPairings[attacker][i:]) > 1:
+                                attacker.dealDamage(blocker, neededDamage)
+                                remainingDamage -= neededDamage
+                            else:
+                                attacker.dealDamage(blocker, remainingDamage)
+                                remainingDamage = 0
+                        else:
+                            attacker.dealDamage(blocker, remainingDamage)
+                            remainingDamage = 0
 
                 if combatPairings[attacker] == []:
                     attacker.dealDamage(opponent, remainingDamage)
@@ -493,18 +506,26 @@ class Game:
         # - Combat Damage
         # All the double-strikers and not-first-strikers deal combat damage
         for attacker in combatPairings:
-            if not attacker.dealtLethal and not attacker.destroyed:
+            if not attacker.destroyed:
                 if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
                     remainingDamage = attacker.curPower
 
-                    for blocker in combatPairings[attacker]:
+                    for i in range(len(combatPairings[attacker])):
+                        blocker = combatPairings[attacker][i]
                         neededDamage = blocker.curTou - blocker.damage
                         if attacker.hasDeathtouch():
                             neededDamage = 1
                         if remainingDamage > 0:
-                            if remainingDamage > neededDamage:
-                                attacker.dealDamage(blocker, neededDamage)
-                                remainingDamage -= neededDamage
+                            if remainingDamage >= neededDamage:
+                                if len(combatPairings[attacker][i:]) > 1:
+                                    attacker.dealDamage(blocker, neededDamage)
+                                    remainingDamage -= neededDamage
+                                else:
+                                    attacker.dealDamage(blocker, remainingDamage)
+                                    remainingDamage = 0
+                            else:
+                                attacker.dealDamage(blocker, remainingDamage)
+                                remainingDamage = 0
 
                     if combatPairings[attacker] == []:
                         attacker.dealDamage(opponent, remainingDamage)
@@ -513,7 +534,7 @@ class Game:
                         if remainingDamage > 0:
                             attacker.dealDamage(opponent, remainingDamage)
             for blocker in combatPairings[attacker]:
-                if not blocker.dealtLethal and not blocker.destroyed:
+                if not blocker.destroyed:
                     if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
                         blocker.dealDamage(attacker, blocker.curPower)
 
@@ -650,6 +671,17 @@ class Game:
         command = "card = " + classname + "(owner)"
         exec(command, globals(), variables)
         return variables['card']
+
+    def createPermanent(self, card, owner):
+        lst = []
+        permanent = None
+        if card.ctype == 'Creature':
+            permanent = Creature(card, owner, self.newPermanentID())
+            lst = owner.creatures
+        else:
+            permanent = Land(card, owner, self.newPermanentID)
+            lst = owner.lands
+
 
 parser = argparse.ArgumentParser(description='Magic: the Gathering AI utilitary')
 parser.add_argument("-a1", "--agent1",

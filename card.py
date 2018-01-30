@@ -32,7 +32,7 @@ class Card:
     def abilities(self):
         return
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         return
 
     def __str__(self):
@@ -88,10 +88,10 @@ class VolcanicHammer(Card):
         self.ctype = "Sorcery"
         self.subtype = ""
         self.text = "Volcanic Hammer deals 3 damage to target creature or player."
-        self.targets = [("OwnCreature", "OpponentCreature", "Player")]
+        self.targets = [["OwnCreature", "OpponentCreature", "Player"]]
         self.owner = owner
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         targets[0].takeDamage(3)
 
 class LavaAxe(Card):
@@ -102,10 +102,10 @@ class LavaAxe(Card):
         self.ctype = "Sorcery"
         self.subtype = ""
         self.text = "Lava Axe deals 5 damage to target player."
-        self.targets = [("Player")]
+        self.targets = [["Player"]]
         self.owner = owner
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         targets[0].takeDamage(5)
 
 class BlazingVolley(Card):
@@ -116,11 +116,11 @@ class BlazingVolley(Card):
         self.ctype = "Sorcery"
         self.subtype = ""
         self.text = "Blazing Volley deals 1 damage to each creature your opponents control."
-        self.targets = [("Opponent")]
+        self.targets = []
         self.owner = owner
 
-    def effect(self, targets):
-        for creature in targets[0].creatures:
+    def effect(self, game, targets):
+        for creature in game.opponent.creatures:
             creature.takeDamage(1)
 
 
@@ -135,7 +135,7 @@ class InspiringRoar(Card):
         self.targets = []
         self.owner = owner
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         for creature in self.owner.creatures:
             creature.power += 1
             creature.tou += 1
@@ -150,10 +150,10 @@ class BatheinDragonfire(Card):
         self.ctype = "Sorcery"
         self.subtype = ""
         self.text = "Bathe in Dragonfire deals 4 damage to target creature."
-        self.targets = [("OwnCreature", "OpponentCreature")]
+        self.targets = [["OwnCreature", "OpponentCreature"]]
         self.owner = owner
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         targets[0].takeDamage(4)
 
 class DayofJudgment(Card):
@@ -164,19 +164,20 @@ class DayofJudgment(Card):
         self.ctype = "Sorcery"
         self.subtype = ""
         self.text = "Destroy all creatures."
-        self.targets = [("Opponent")]
+        self.targets = []
         self.owner = owner
 
-    def effect(self, targets):
+    def effect(self, game, targets):
+
         for creature in self.owner.creatures:
             creature.destroy()
 
-        for creature in targets[0].creatures:
+        for creature in game.opponent.creatures:
             creature.destroy()
 
 class GriffinSentinel(Card):
     def __init__(self, owner):
-        self.name = "Grifin Sentinel"
+        self.name = "Griffin Sentinel"
         self.cost = "2W"
         self.supertype = ""
         self.ctype = "Creature"
@@ -281,13 +282,14 @@ class HeavyInfantry(Card):
         self.subtype = "Human Soldier"
         self.text = "When Heavy Infantry enters the battlefield, tap target creature an opponent controls. 3/4"
         self.abilities = []
-        self.targets = [("OpponentCreature")]
+        self.targets = [["OpponentCreature"]]
         self.owner = owner
         self.power = 3
         self.tou = 4
 
-    def effect(self, targets):
-        targets[0].tap()
+    def effect(self, game, targets):
+        if len(targets) > 0:
+            targets[0].tap()
 
 class FoulImp(Card):
     def __init__(self, owner):
@@ -303,7 +305,7 @@ class FoulImp(Card):
         self.power = 1
         self.tou = 1
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         self.owner.loseLife(1)
 
 class AngelofMercy(Card):
@@ -320,7 +322,7 @@ class AngelofMercy(Card):
         self.power = 3
         self.tou = 3
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         self.owner.gainLife(3)
 
 class GuardianofPilgrims(Card):
@@ -332,12 +334,12 @@ class GuardianofPilgrims(Card):
         self.subtype = "Spirit Cleric"
         self.text = "When Guardian of Pilgrims enters the battlefield, target creature gets +1/+1 until end of turn. 2/2"
         self.abilities = []
-        self.targets = [("OwnCreature", "OpponentCreature")]
+        self.targets = [["OwnCreature", "OpponentCreature"]]
         self.owner = owner
         self.power = 2
         self.tou = 2
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         targets[0].curPower = targets[0].curPower + 1
         targets[0].curTou = targets[0].curTou + 1
 
@@ -378,12 +380,12 @@ class FlametongueKavu(Card):
         self.subtype = "Kavu"
         self.text = "When Flametongue Kavu enters the battlefield, it deals 4 damage to target creature. 4/2"
         self.abilities = []
-        self.targets = [("OwnCreature", "OpponentCreature")]
+        self.targets = [["OwnCreature", "OpponentCreature"]]
         self.owner = owner
         self.power = 4
         self.tou = 2
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         targets[0].takeDamage(4)
 
 class PathofPeace(Card):
@@ -394,9 +396,41 @@ class PathofPeace(Card):
         self.ctype = "Sorcery"
         self.subtype = ""
         self.text = "Destroy target creature. It's owner gains 4 life."
-        self.targets = [("OwnCreature", "OpponentCreature")]
+        self.targets = [["OwnCreature", "OpponentCreature"]]
         self.owner = owner
 
-    def effect(self, targets):
+    def effect(self, game, targets):
         targets[0].owner.gainLife(4)
         targets[0].destroy()
+
+class HumanToken(Card):
+    def __init__(self,owner):
+        self.name = "Human"
+        self.cost = "0"
+        self.supertype = ""
+        self.ctype = "Creature"
+        self.subtype = "Human"
+        self.text = ""
+        self.abilities = []
+        self.targets = []
+        self.owner = owner
+        self.power = 1
+        self.tou = 1
+
+class GathertheTownsfolk(Card):
+    def __init__(self, owner):
+        self.name = "Gather the Townsfolk"
+        self.cost = "1W"
+        self.supertype = ""
+        self.ctype = "Sorcery"
+        self.subtype = ""
+        self.text = "Create two 1/1 white Human creature tokens. \\ Fateful hour — If you have 5 or less life, create five of those tokens instead."
+        self.targets = []
+        self.owner = owner
+
+    def effect(self, game, targets):
+        tokens = 2
+        if owner.life <= 5:
+            tokens = 5
+        for i in range(tokens):
+            game.createPermanent(self.owner, HumanToken(self.owner))

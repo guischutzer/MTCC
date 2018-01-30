@@ -5,7 +5,7 @@
 4 Inspiring Roar
 2 Day of Judgment
 4 Griffin Sentinel
-4 Siege Mastodon
-4 Heavy Infantry
+3 Siege Mastodon
+3 Heavy Infantry
 4 Fencing Ace
-2 Champion of Arashin
+4 Champion of Arashin
