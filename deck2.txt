@@ -4,8 +4,9 @@
 4 Path of Peace
 4 Inspiring Roar
 2 Day of Judgment
-4 Griffin Sentinel
-3 Siege Mastodon
-3 Heavy Infantry
+2 Griffin Sentinel
+2 Siege Mastodon
+2 Heavy Infantry
 4 Fencing Ace
 4 Champion of Arashin
+4 Gather the Townsfolk

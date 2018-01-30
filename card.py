@@ -430,7 +430,7 @@ class GathertheTownsfolk(Card):
 
     def effect(self, game, targets):
         tokens = 2
-        if owner.life <= 5:
+        if self.owner.life <= 5:
             tokens = 5
         for i in range(tokens):
-            game.createPermanent(self.owner, HumanToken(self.owner))
+            game.createPermanent(HumanToken(self.owner), self.owner)

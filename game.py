@@ -199,7 +199,12 @@ class Game:
 
         return False
 
-    # Main phase method. Lets players play cards
+
+
+    ############### MAIN PHASE HANDLING ###############
+    #
+    # Main phase method. Lets players play cards.
+    # checkSBA() called (returns True if game has ended)
     def mainPhase(self, number):
 
         player = self.activePlayer
@@ -260,12 +265,11 @@ class Game:
 
         print("Player " + player.name + " passes priority.")
         return False
-
-    # getMainActions() returns active players legal actions
-    # in any main phase. Actions can be
+    #
+    # returns active players legal actions in any main phase. Actions can be
     # - ['Pass'] to pass the turn
     # - ['Print'] to print the board state
-    # - [card, targets] to play a card targeting a list of legalTargets
+    # - [card, targets] to play a card targeting a list of legalTargets (found by ID)
     def getMainActions(self):
 
         # every player always has the option to pass
@@ -296,120 +300,8 @@ class Game:
                     legalActions.append(action)
 
         return legalActions
-
-    def canTarget(self, player, targets):
-
-        opponent = self.opponentOf(player)
-        ownCreatures = c.copy(player.creatures)
-
-        opponentCreatures = c.copy(opponent.creatures)
-        for creature in opponentCreatures:
-            if creature.hasHexproof():
-                opponentCreatures.remove(creature)
-
-        for target in targets:
-            for targetType in target:
-                foundTarget = False
-                if foundTarget:
-                    break
-                if targetType == "Player" or targetType == "Opponent":
-                    foundTarget = True
-                elif targetType == "Creature":
-                    if len(ownCreatures) > 0:
-                        ownCreatures.pop()
-                        foundTarget = True
-                    elif len(opponentCreatures) > 0:
-                        opponentCreatures.pop()
-                        foundTarget = True
-                elif targetType == "OwnCreature":
-                    if len(ownCreatures) > 0:
-                        ownCreatures.pop()
-                        foundTarget = True
-                elif targetType == "OpponentCreature":
-                    if len(opponentCreatures) > 0:
-                        opponentCreatures.pop()
-                        foundTarget = True
-            if not foundTarget:
-                return False
-
-        return True
-
-    def findLegalTargets(self, player, card):
-
-        legalTargets = []
-        if card.targets == []:
-            return legalTargets
-
-        opponent = self.opponentOf(player)
-        ownCreatures = copy(player.creatures)
-        if card.ctype == 'Creature':
-            ownCreatures.append(Creature(card, player, self.permanentID + 1))
-
-        opponentCreatures = copy(opponent.creatures)
-        for creature in opponentCreatures:
-            if creature.hasHexproof():
-                opponentCreatures.remove(creature)
-
-        for possibleTarget in card.targets:
-            curList = []
-            for targetType in possibleTarget:
-                if targetType == "OwnCreature":
-                    for creature in ownCreatures:
-                        curList.append(creature)
-
-                if targetType == "OpponentCreature":
-                    for creature in opponentCreatures:
-                        curList.append(creature)
-
-                if targetType == "Player":
-                    curList.append(player)
-                    curList.append(opponent)
-
-                if targetType == "Opponent":
-                    curList.append(opponent)
-
-            legalTargets.append(curList)
-
-        return legalTargets
-
-    def canPlay(self, player, card):
-
-        if card.ctype == "Land":
-            if self.activePlayer.landDrop == True:
-                return False
-            else:
-                return True
-
-        if card.cmc() <= player.untappedLands:
-            if card.ctype == "Sorcery":
-                if not self.canTarget(player, card.targets):
-                    return False
-                return True
-            else:
-                return True
-
-        return False
-
-    def checkSBA(self):
-        for player in self.activePlayer, self.opponent:
-            for creature in player.creatures:
-                if creature.damage >= creature.curTou:
-                    creature.dealtLethal = True
-                if creature.dealtLethal or creature.destroyed:
-                    player.creatures.remove(creature)
-                    creature.putOnGraveyard()
-
-            for land in player.lands:
-                if land.destroyed:
-                    player.lands.remove(land)
-                    land.putOnGraveyard()
-            if player.life <= 0:
-                player.lose = True
-            if player.lose:
-                return True
-
-        return False
-
+    #
+    # Plays the selected card with selected targets.
     def play(self, action):
 
         card = self.activePlayer.hand[action[0]]
@@ -454,7 +346,136 @@ class Game:
             card.effect(self, targets)
             player.graveyard.append(card)
             return None
+    #
+    # Returns True if player can play card, False if not.
+    def canPlay(self, player, card):
 
+        if card.ctype == "Land":
+            if self.activePlayer.landDrop == True:
+                return False
+            else:
+                return True
+
+        if card.cmc() <= player.untappedLands:
+            if card.ctype == "Sorcery":
+                if not self.canTarget(player, card.targets):
+                    return False
+                return True
+            else:
+                return True
+
+        return False
+    #
+    # Returns True if an effect can be applied to any target, False if not.
+    def canTarget(self, player, targets):
+
+        opponent = self.opponentOf(player)
+        ownCreatures = c.copy(player.creatures)
+
+        opponentCreatures = c.copy(opponent.creatures)
+        for creature in opponentCreatures:
+            if creature.hasHexproof():
+                opponentCreatures.remove(creature)
+
+        for target in targets:
+            for targetType in target:
+                foundTarget = False
+                if foundTarget:
+                    break
+                if targetType == "Player" or targetType == "Opponent":
+                    foundTarget = True
+                elif targetType == "Creature":
+                    if len(ownCreatures) > 0:
+                        ownCreatures.pop()
+                        foundTarget = True
+                    elif len(opponentCreatures) > 0:
+                        opponentCreatures.pop()
+                        foundTarget = True
+                elif targetType == "OwnCreature":
+                    if len(ownCreatures) > 0:
+                        ownCreatures.pop()
+                        foundTarget = True
+                elif targetType == "OpponentCreature":
+                    if len(opponentCreatures) > 0:
+                        opponentCreatures.pop()
+                        foundTarget = True
+            if not foundTarget:
+                return False
+
+        return True
+    #
+    # Returns list of every possible target to the card's effect
+    def findLegalTargets(self, player, card):
+
+        legalTargets = []
+        if card.targets == []:
+            return legalTargets
+
+        opponent = self.opponentOf(player)
+        ownCreatures = copy(player.creatures)
+        if card.ctype == 'Creature':
+            ownCreatures.append(Creature(card, player, self.permanentID + 1))
+
+        opponentCreatures = copy(opponent.creatures)
+        for creature in opponentCreatures:
+            if creature.hasHexproof():
+                opponentCreatures.remove(creature)
+
+        for possibleTarget in card.targets:
+            curList = []
+            for targetType in possibleTarget:
+                if targetType == "OwnCreature":
+                    for creature in ownCreatures:
+                        curList.append(creature)
+
+                if targetType == "OpponentCreature":
+                    for creature in opponentCreatures:
+                        curList.append(creature)
+
+                if targetType == "Player":
+                    curList.append(player)
+                    curList.append(opponent)
+
+                if targetType == "Opponent":
+                    curList.append(opponent)
+
+            legalTargets.append(curList)
+
+        return legalTargets
+
+    ############### STATE-BASED ACTIONS CHECKING - VERY IMPORTANT ###############
+    #
+    # This method is called several times throughout program execution to handle
+    # mainly permanents being destroyed and players losing (end of game).
+    def checkSBA(self):
+        for player in self.activePlayer, self.opponent:
+            for creature in player.creatures:
+                if creature.damage >= creature.curTou:
+                    creature.dealtLethal = True
+                if creature.dealtLethal or creature.destroyed:
+                    player.creatures.remove(creature)
+                    creature.putOnGraveyard()
+
+            for land in player.lands:
+                if land.destroyed:
+                    player.lands.remove(land)
+                    land.putOnGraveyard()
+            if player.life <= 0:
+                player.lose = True
+            if player.lose:
+                return True
+
+        return False
+
+    ############### COMBAT HANDLING ###############
+    #
+    # Returns every combination of legal attackers possible.
+    def getAttackingActions(self):
+        player = self.activePlayer
+        possibleAttackers = [creature for creature in player.creatures if creature.canAttack()]
+        return utils.listArrangements(possibleAttackers)
+    #
+    # Calls attack() for each attacking creature.
     def attack(self, attackers):
         # combatPairings pair attackers with their assigned blockers
         combatPairings = {}
@@ -462,7 +483,28 @@ class Game:
             creature.attack()
             combatPairings[creature] = []
         return combatPairings
+    #
+    # Return every combination of legal pairings of current attackers
+    # and blocking creatures possible.
+    def getBlockingActions(self, attackers):
 
+        player = self.opponent
+
+        possibleBlocksList = []
+        for creature in player.creatures:
+            possibleBlocks = [None]
+            for attacker in attackers:
+                if creature.canBlock(attacker):
+                    possibleBlocks.append(attacker)
+            possibleBlocksList.append(possibleBlocks)
+        if possibleBlocksList == []:
+            possibleBlocksList = [[]]
+
+        return utils.listCombinations(possibleBlocksList)
+    #
+    # Each attacker deals damage to its' blockers and vice-versa;
+    # Each unblocked attacker deals damage to defending player;
+    # checkSBA() called (returns True if game has ended)
     def resolveCombat(self, combatPairings):
         activePlayer = self.activePlayer
         opponent = self.opponent
@@ -549,10 +591,51 @@ class Game:
 
         return False
 
+    ############### CARD AND PERMANENT HANDLING ###############
+    #
+    # Read deck from text file.
+    def readDeck(self, filename, owner):
+
+        library = []
+        f = open(filename, 'r')
+
+        deckList = f.readlines()
+        for entry in deckList:
+            entry = entry.split(" ")
+            number = int(entry[0])
+            name = " ".join(entry[1:])
+            for i in range(number):
+                library.append(self.createCard(name, owner))
+
+        owner.setLibrary(library)
+    #
+    # Create card based on read name.
+    def createCard(self, cardname, owner):
+        card = None
+        classname = re.sub("[ \n]", "", cardname)
+        variables = locals()
+        command = "card = " + classname + "(owner)"
+        exec(command, globals(), variables)
+        return variables['card']
+    #
+    # Create permanent (usually) when played.
+    def createPermanent(self, card, owner):
+        lst = []
+        permanent = None
+        if card.ctype == 'Creature':
+            permanent = Creature(card, owner, self.newPermanentID())
+            lst = owner.creatures
+        else:
+            permanent = Land(card, owner, self.newPermanentID)
+            lst = owner.lands
+        lst.append(permanent)
+    #
+    # Each created permanent has a new ID.
     def newPermanentID(self):
         self.permanentID += 1
         return self.permanentID
-
+    #
+    # Returns permanent from ID (like a query).
     def getPermanentFromID(self, permanentID):
         if permanentID == 0:
             return self.player_1
@@ -584,7 +667,9 @@ class Game:
                         return land
         print("Permanent with ID " + str(permanentID) + " was not found.")
         return None
-
+    #
+    # Returns Creature combat pairings with combat pairings
+    # comprising of ID integers
     def getCombatPairingsFromIDs(self, combatPairingsIDs):
         combatPairings = {}
         for attID in combatPairingsIDs:
@@ -595,6 +680,33 @@ class Game:
                 combatPairings[attacker].append(blocker)
         return combatPairings
 
+    ############### ACTIVE PLAYER METHODS ###############
+    #
+    # Some administrative methods to class Game
+    #
+    def opponentOf(self, player):
+        if self.player_1 == player:
+            return self.player_2
+
+        return self.player_1
+    #
+    def changeActivePlayer(self):
+        self.player_1.setActive(not self.player_1.isActive())
+        self.player_2.setActive(not self.player_2.isActive())
+        aux = self.activePlayer
+        self.activePlayer = self.opponent
+        self.opponent = aux
+    #
+    def setActivePlayer(self, ID):
+        self.player_1.setActive(ID == 1)
+        self.player_2.setActive(ID == 2)
+        if self.player_1.isActive():
+            return self.player_1
+        return self.player_2
+
+    ############### GAME INFO ###############
+    #
+    # Prints board state and life totals.
     def printGameState(self):
         print("Active Player: " + self.activePlayer.name + " - " + str(self.activePlayer.life) + " life")
         for land in self.activePlayer.lands:
@@ -607,80 +719,6 @@ class Game:
             print(land.stats())
         for creature in self.opponent.creatures:
             print(creature.stats())
-
-    def getAttackingActions(self):
-        player = self.activePlayer
-        possibleAttackers = [creature for creature in player.creatures if creature.canAttack()]
-        return utils.listArrangements(possibleAttackers)
-
-    def getBlockingActions(self, attackers):
-
-        player = self.opponent
-
-        possibleBlocksList = []
-        for creature in player.creatures:
-            possibleBlocks = [None]
-            for attacker in attackers:
-                if creature.canBlock(attacker):
-                    possibleBlocks.append(attacker)
-            possibleBlocksList.append(possibleBlocks)
-        if possibleBlocksList == []:
-            possibleBlocksList = [[]]
-
-        return utils.listCombinations(possibleBlocksList)
-
-    def readDeck(self, filename, owner):
-
-        library = []
-        f = open(filename, 'r')
-
-        deckList = f.readlines()
-        for entry in deckList:
-            entry = entry.split(" ")
-            number = int(entry[0])
-            name = " ".join(entry[1:])
-            for i in range(number):
-                library.append(self.createCard(name, owner))
-
-        owner.setLibrary(library)
-
-    def opponentOf(self, player):
-        if self.player_1 == player:
-            return self.player_2
-
-        return self.player_1
-
-    def changeActivePlayer(self):
-        self.player_1.setActive(not self.player_1.isActive())
-        self.player_2.setActive(not self.player_2.isActive())
-        aux = self.activePlayer
-        self.activePlayer = self.opponent
-        self.opponent = aux
-
-    def setActivePlayer(self, ID):
-        self.player_1.setActive(ID == 1)
-        self.player_2.setActive(ID == 2)
-        if self.player_1.isActive():
-            return self.player_1
-        return self.player_2
-
-    def createCard(self, cardname, owner):
-        card = None
-        classname = re.sub("[ \n]", "", cardname)
-        variables = locals()
-        command = "card = " + classname + "(owner)"
-        exec(command, globals(), variables)
-        return variables['card']
-
-    def createPermanent(self, card, owner):
-        lst = []
-        permanent = None
-        if card.ctype == 'Creature':
-            permanent = Creature(card, owner, self.newPermanentID())
-            lst = owner.creatures
-        else:
-            permanent = Land(card, owner, self.newPermanentID)
-            lst = owner.lands
 
 
 parser = argparse.ArgumentParser(description='Magic: the Gathering AI utilitary')
