@@ -143,10 +143,10 @@ class Creature(Permanent):
         return True
 
     def hasFirstStrike(self):
-        return "First Strike" in self.currentAbilities
+        return "First strike" in self.currentAbilities
 
     def hasDoubleStrike(self):
-        return "Double Strike" in self.currentAbilities
+        return "Double strike" in self.currentAbilities
 
     def hasLifelink(self):
         return "Lifelink" in self.currentAbilities

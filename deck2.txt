@@ -1,4 +1,11 @@
 24 Plains
-9 Angel of Mercy
-20 Guardian of Pilgrims
-7 Path of Peace
+4 Angel of Mercy
+4 Guardian of Pilgrims
+4 Path of Peace
+4 Inspiring Roar
+2 Day of Judgment
+4 Griffin Sentinel
+4 Siege Mastodon
+4 Heavy Infantry
+4 Fencing Ace
+2 Champion of Arashin

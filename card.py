@@ -94,6 +94,201 @@ class VolcanicHammer(Card):
     def effect(self, targets):
         targets[0].takeDamage(3)
 
+class LavaAxe(Card):
+    def __init__(self, owner):
+        self.name = "Lava Axe"
+        self.cost = "4R"
+        self.supertype = ""
+        self.ctype = "Sorcery"
+        self.subtype = ""
+        self.text = "Lava Axe deals 5 damage to target player."
+        self.targets = [("Player")]
+        self.owner = owner
+
+    def effect(self, targets):
+        targets[0].takeDamage(5)
+
+class BlazingVolley(Card):
+    def __init__(self, owner):
+        self.name = "Blazing Volley"
+        self.cost = "R"
+        self.supertype = ""
+        self.ctype = "Sorcery"
+        self.subtype = ""
+        self.text = "Blazing Volley deals 1 damage to each creature your opponents control."
+        self.targets = [("Opponent")]
+        self.owner = owner
+
+    def effect(self, targets):
+        for creature in targets[0].creatures:
+            creature.takeDamage(1)
+
+
+class InspiringRoar(Card):
+    def __init__(self, owner):
+        self.name = "Inspiring Roar"
+        self.cost = "3W"
+        self.supertype = ""
+        self.ctype = "Sorcery"
+        self.subtype = ""
+        self.text = "Put a +1/+1 counter on each creature you control."
+        self.targets = []
+        self.owner = owner
+
+    def effect(self, targets):
+        for creature in self.owner.creatures:
+            creature.power += 1
+            creature.tou += 1
+            creature.curTou += 1
+            creature.curPower += 1
+
+class BatheinDragonfire(Card):
+    def __init__(self, owner):
+        self.name = "Bathe in Dragonfire"
+        self.cost = "2R"
+        self.supertype = ""
+        self.ctype = "Sorcery"
+        self.subtype = ""
+        self.text = "Bathe in Dragonfire deals 4 damage to target creature."
+        self.targets = [("OwnCreature", "OpponentCreature")]
+        self.owner = owner
+
+    def effect(self, targets):
+        targets[0].takeDamage(4)
+
+class DayofJudgment(Card):
+    def __init__(self, owner):
+        self.name = "Day of Judgment"
+        self.cost = "2WW"
+        self.supertype = ""
+        self.ctype = "Sorcery"
+        self.subtype = ""
+        self.text = "Destroy all creatures."
+        self.targets = [("Opponent")]
+        self.owner = owner
+
+    def effect(self, targets):
+        for creature in self.owner.creatures:
+            creature.destroy()
+
+        for creature in targets[0].creatures:
+            creature.destroy()
+
+class GriffinSentinel(Card):
+    def __init__(self, owner):
+        self.name = "Grifin Sentinel"
+        self.cost = "2W"
+        self.supertype = ""
+        self.ctype = "Creature"
+        self.subtype = "Griffin"
+        self.text = "Flying, vigilance. 1/3"
+        self.abilities = ["Flying", "Vigilance"]
+        self.targets = []
+        self.owner = owner
+        self.power = 1
+        self.tou = 3
+
+class SiegeMastodon(Card):
+    def __init__(self, owner):
+        self.name = "Siege Mastodon"
+        self.cost = "4W"
+        self.supertype = ""
+        self.ctype = "Creature"
+        self.subtype = "Elephant"
+        self.text = "3/5"
+        self.abilities = []
+        self.targets = []
+        self.owner = owner
+        self.power = 3
+        self.tou = 5
+
+class BrazenScourge(Card):
+    def __init__(self, owner):
+        self.name = "Brazen Scourge"
+        self.cost = "1RR"
+        self.supertype = ""
+        self.ctype = "Creature"
+        self.subtype = "Gremlin"
+        self.text = "3/3"
+        self.abilities = ["Haste"]
+        self.targets = []
+        self.owner = owner
+        self.power = 3
+        self.tou = 3
+
+class SkyrakerGiant(Card):
+    def __init__(self, owner):
+        self.name = "Skyraker Giant"
+        self.cost = "2RR"
+        self.supertype = ""
+        self.ctype = "Creature"
+        self.subtype = "Giant"
+        self.text = "4/3"
+        self.abilities = ["Reach"]
+        self.targets = []
+        self.owner = owner
+        self.power = 3
+        self.tou = 4
+
+class FencingAce(Card):
+    def __init__(self, owner):
+        self.name = "Fencing Ace"
+        self.cost = "1W"
+        self.supertype = ""
+        self.ctype = "Creature"
+        self.subtype = "Human Soldier"
+        self.text = "Double strike. 1/1"
+        self.abilities = ["Double strike"]
+        self.targets = []
+        self.owner = owner
+        self.power = 1
+        self.tou = 1
+
+class ChampionofArashin(Card):
+    def __init__(self, owner):
+        self.name = "Champion of Arashin"
+        self.cost = "3W"
+        self.supertype = ""
+        self.ctype = "Creature"
+        self.subtype = "Hound Warrior"
+        self.text = "3/2"
+        self.abilities = ["Lifelink"]
+        self.targets = []
+        self.owner = owner
+        self.power = 3
+        self.tou = 2
+
+class FrenziedRaptor(Card):
+    def __init__(self, owner):
+        self.name = "Frenzied Raptor"
+        self.cost = "2R"
+        self.supertype = ""
+        self.ctype = "Creature"
+        self.subtype = "Dinosaur"
+        self.text = "4/2"
+        self.abilities = []
+        self.targets = []
+        self.owner = owner
+        self.power = 4
+        self.tou = 2
+
+class HeavyInfantry(Card):
+    def __init__(self, owner):
+        self.name = "Heavy Infantry"
+        self.cost = "4W"
+        self.supertype = ""
+        self.ctype = "Creature"
+        self.subtype = "Human Soldier"
+        self.text = "When Heavy Infantry enters the battlefield, tap target creature an opponent controls. 3/4"
+        self.abilities = []
+        self.targets = [("OpponentCreature")]
+        self.owner = owner
+        self.power = 3
+        self.tou = 4
+
+    def effect(self, targets):
+        targets[0].tap()
+
 class FoulImp(Card):
     def __init__(self, owner):
         self.name = "Foul Imp"
@@ -167,8 +362,8 @@ class LightningHounds(Card):
         self.supertype = ""
         self.ctype = "Creature"
         self.subtype = "Hound"
-        self.text = "First Strike. 3/2"
-        self.abilities = ["First Strike"]
+        self.text = "First strike. 3/2"
+        self.abilities = ["First strike"]
         self.targets = []
         self.owner = owner
         self.power = 3

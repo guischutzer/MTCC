@@ -1,5 +1,10 @@
-10 Volcanic Hammer
-10 Nest Robber
-6 Flametongue Kavu
-10 Lightning Hounds
+4 Volcanic Hammer
+4 Nest Robber
+4 Flametongue Kavu
+4 Frenzied Raptor
+4 Brazen Scourge
+4 Lightning Hounds
+4 Lava Axe
+4 Blazing Volley
+4 Skyraker Giant
 24 Mountain

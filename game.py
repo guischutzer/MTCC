@@ -13,7 +13,7 @@ class Game:
     # - agent1/agent2 is the type of each agent
     # - deck1/deck2 are the deck files
     # - verbosity prints extra data
-    # - choosename is used to input different names for the players
+    # - choosefname is used to input different names for the players
     def __init__(self, agent1, deck1, agent2, deck2, verbosity, choosename):
 
         actPlayerID = random.randrange(-1, 1)
@@ -107,8 +107,6 @@ class Game:
             land.untap()
             land.removeSickness()
 
-        self.printGameState()
-
         # Upkeep
         if self.checkSBA():
             return True
@@ -123,6 +121,10 @@ class Game:
         print("----------------------------------------------------------")
         print("Precombat Main Phase")
         print("----------------------------------------------------------")
+
+        for card in activePlayer.hand:
+            print (card.name)
+        print("")
 
         # Main Phase method
         if self.mainPhase(1):
@@ -140,8 +142,10 @@ class Game:
         # [creature1 - attacking or not, creature2 - attacking or not, ...]
         # Active player chooses how creatures attack
         if self.attackers == None:
+            legalActions = self.getAttackingActions()
             self.attackers = activePlayer.declareAttackers(legalActions)
         combatPairings = self.attack(self.attackers)
+        activePlayer.printAttackers(self.attackers)
 
         # Declare Blockers - Not Active Player
 
@@ -216,8 +220,10 @@ class Game:
                     return True
                 i += 1
                 action = actionPath[i]
-            if phase == 'First main':
-                self.attackers = actionPath[i+1]
+            if phase == 'First Main':
+                self.attackers = []
+                for attID in actionPath[i+1]:
+                    self.attackers.append(self.getPermanentFromID(attID))
 
         else:
             action = ['','']
@@ -253,7 +259,7 @@ class Game:
     # in any main phase. Actions can be
     # - ['Pass'] to pass the turn
     # - ['Print'] to print the board state
-    # - [card, targets] to play a card targetting a list of legalTargets
+    # - [card, targets] to play a card targeting a list of legalTargets
     def getMainActions(self):
 
         # every player always has the option to pass
@@ -487,28 +493,29 @@ class Game:
         # - Combat Damage
         # All the double-strikers and not-first-strikers deal combat damage
         for attacker in combatPairings:
-            if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
-                remainingDamage = attacker.curPower
+            if not attacker.dealtLethal and not attacker.destroyed:
+                if not attacker.hasFirstStrike() or attacker.hasDoubleStrike():
+                    remainingDamage = attacker.curPower
 
-                for blocker in combatPairings[attacker]:
-                    neededDamage = blocker.curTou - blocker.damage
-                    if attacker.hasDeathtouch():
-                        neededDamage = 1
-                    if remainingDamage > 0:
-                        if remainingDamage > neededDamage:
-                            attacker.dealDamage(blocker, neededDamage)
-                            remainingDamage -= neededDamage
+                    for blocker in combatPairings[attacker]:
+                        neededDamage = blocker.curTou - blocker.damage
+                        if attacker.hasDeathtouch():
+                            neededDamage = 1
+                        if remainingDamage > 0:
+                            if remainingDamage > neededDamage:
+                                attacker.dealDamage(blocker, neededDamage)
+                                remainingDamage -= neededDamage
 
-                if combatPairings[attacker] == []:
-                    attacker.dealDamage(opponent, remainingDamage)
-
-                elif attacker.hasTrample():
-                    if remainingDamage > 0:
+                    if combatPairings[attacker] == []:
                         attacker.dealDamage(opponent, remainingDamage)
 
+                    elif attacker.hasTrample():
+                        if remainingDamage > 0:
+                            attacker.dealDamage(opponent, remainingDamage)
             for blocker in combatPairings[attacker]:
-                if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    blocker.dealDamage(attacker, blocker.curPower)
+                if not blocker.dealtLethal and not blocker.destroyed:
+                    if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
+                        blocker.dealDamage(attacker, blocker.curPower)
 
         if self.checkSBA():
             return True
