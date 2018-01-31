@@ -453,7 +453,7 @@ class RandomAgent(MulliganAgent):
             return []
 
         index = random.randrange(0, len(legalActions))
-        attIDs = legalActions[index]
+        attackers = legalActions[index]
 
         return attackers
 
