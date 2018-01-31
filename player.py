@@ -321,7 +321,6 @@ class MulliganAgent(Player):
                              [None, None],
                              [None]]
 
-
     def setLibrary(self, deck):
         self.library = deck
 
