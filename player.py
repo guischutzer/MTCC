@@ -393,7 +393,7 @@ class MulliganAgent(Player):
             for j in range(i + 1):
                 self.mulliganValue[7 - i][j] = self.getKeepReward(i, j)
 
-        for epoch in range(1, 9):
+        for epoch in range(0, 9):
             for i in range(7, -1, -1):
                 for j in range(i + 1):
                     mullValue = 0
