@@ -177,7 +177,7 @@ class Player:
             if creature.canAttack():
                 c = input("Declare " + creature.card.name + " as an attacker? (y/N) ")
                 if utils.confirm(c):
-                    attackers.append(creature)
+                    attackers.append(creature.ID)
 
         return attackers
 
@@ -463,7 +463,7 @@ class RandomAgent(MulliganAgent):
             return []
 
         index = random.randrange(0, len(legalActions))
-        attackers = legalActions[index]
+        attIDs = legalActions[index]
 
         return attackers
 
@@ -598,16 +598,16 @@ class SearchAgent(RandomAgent):
         attackConfigurations = game.getAttackingActions()
         noAttacksState = State(game, 'Second Main', state.actionPath + [[]])
         children.append(noAttacksState)
-        for attackers in attackConfigurations:
+        for attIDs in attackConfigurations:
             newGame = c.deepcopy(game)
-            combatPairings = newGame.attack(attackers)
-            legalBlocks = newGame.getBlockingActions(attackers)
+            newAttackers = []
+            for attID in attIDs:
+                newAttackers.append(newGame.getPermanentFromID(attID))
+            combatPairings = newGame.attack(newAttackers)
+            legalBlocks = newGame.getBlockingActions(newAttackers)
             combatPairingsIDs = self.chooseBlockers(legalBlocks, combatPairings, state, False)
             combatPairings = newGame.getCombatPairingsFromIDs(combatPairingsIDs)
             newGame.resolveCombat(combatPairings)
-            attIDs = []
-            for attacker in attackers:
-                attIDs.append(attacker.ID)
             children.append(State(newGame, 'Second Main', state.actionPath + [attIDs]))
         return children
 

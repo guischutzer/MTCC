@@ -143,14 +143,16 @@ class Game:
         # Active player chooses how creatures attack
         if self.attackers == None:
             legalActions = self.getAttackingActions()
-            self.attackers = activePlayer.declareAttackers(legalActions)
+            attIDs = activePlayer.declareAttackers(legalActions)
+            self.attackers = []
+            for ID in attIDs:
+                self.attackers.append(self.getPermanentFromID(ID))
         else:
             liveAttackers = []
             for attacker in self.attackers:
                 if not attacker.destroyed:
                     liveAttackers.append(attacker)
             self.attackers = liveAttackers
-        print("attackers: " + str(self.attackers))
         combatPairings = self.attack(self.attackers)
         activePlayer.printAttackers(self.attackers)
 
@@ -472,7 +474,7 @@ class Game:
     # Returns every combination of legal attackers possible.
     def getAttackingActions(self):
         player = self.activePlayer
-        possibleAttackers = [creature for creature in player.creatures if creature.canAttack()]
+        possibleAttackers = [creature.ID for creature in player.creatures if creature.canAttack()]
         return utils.listArrangements(possibleAttackers)
     #
     # Calls attack() for each attacking creature.
