@@ -1,5 +1,5 @@
 24 Plains
-4 Angel of Mercy
+3 Angel of Mercy
 4 Guardian of Pilgrims
 4 Path of Peace
 4 Inspiring Roar
@@ -8,5 +8,6 @@
 2 Siege Mastodon
 2 Heavy Infantry
 4 Fencing Ace
-4 Champion of Arashin
-4 Gather the Townsfolk
+3 Champion of Arashin
+2 Gather the Townsfolk
+4 Timely Reinforcements

@@ -170,9 +170,11 @@ class DayofJudgment(Card):
     def effect(self, game, targets):
 
         for creature in self.owner.creatures:
+            print(creature.stats())
             creature.destroy()
 
         for creature in game.opponent.creatures:
+            print(creature.stats())
             creature.destroy()
 
 class GriffinSentinel(Card):
@@ -434,3 +436,21 @@ class GathertheTownsfolk(Card):
             tokens = 5
         for i in range(tokens):
             game.createPermanent(HumanToken(self.owner), self.owner)
+
+class TimelyReinforcements(Card):
+    def __init__(self, owner):
+        self.name = "Timely Reinforcements"
+        self.cost = "2W"
+        self.supertype = ""
+        self.ctype = "Sorcery"
+        self.subtype = ""
+        self.text = "If you have less life than an opponent, you gain 6 life. If you control fewer creatures than an opponent, create three 1/1 white Soldier creature tokens."
+        self.targets = []
+        self.owner = owner
+
+    def effect(self, game, targets):
+        if self.owner.life < game.opponent.life:
+            self.owner.gainLife(6)
+        if len(self.owner.creatures) < len(game.opponent.creatures):
+            for i in range(3):
+                game.createPermanent(HumanToken(self.owner), self.owner)

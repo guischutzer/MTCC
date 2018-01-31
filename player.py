@@ -294,6 +294,9 @@ class MulliganAgent(Player):
         else:
             self.landRewards = [-4,  0, 5, 6, 3,  0, -3, -5]
 
+        self.initMulliganTables()
+
+    def initMulliganTables(self):
         self.mulliganValue = [[None, None, None, None, None, None, None, None],
                                [None, None, None, None, None, None, None],
                                [None, None, None, None, None, None],
@@ -326,65 +329,6 @@ class MulliganAgent(Player):
         for card in self.library:
             if card.ctype is 'Land':
                 self.landsInLibrary += 1
-
-    def getHandReward(self, hand):
-
-        lands = 0
-
-        for card in hand:
-            if card.ctype is 'Land':
-                lands += 1
-
-        return self.getKeepReward(len(hand), lands)
-
-    def getKeepReward(self, i, j):
-
-        alpha = 3.5
-
-        if self.keepRewards[7 - i][j] is not None:
-            return self.keepRewards[7 - i][j]
-
-        reward = self.landRewards[j] + alpha*i
-        self.keepRewards[7 - i][j] = reward
-
-        return reward
-
-
-    def mulliganValueIteration(self):
-
-        for i in range(7, -1, -1):
-            for j in range(i + 1):
-                self.mulliganValue[7 - i][j] = self.getKeepReward(i, j)
-
-        for epoch in range(1, 9):
-            for i in range(7, -1, -1):
-                for j in range(i + 1):
-                    mullValue = 0
-                    for jLine in range(i):
-                        mullValue += self.getMulliganProb(i - 1, jLine)*self.mulliganValue[7 - (i - 1)][jLine]
-                    if mullValue >= self.getKeepReward(i, j):
-                        self.mulliganValue[7 - i][j] = mullValue
-
-
-    def getMulliganProb(self, i, j):
-
-        if self.mulliganProb[6 - i][j] is not None:
-            return self.mulliganProb[6 - i][j]
-
-        prob = utils.binom(self.landsInLibrary, j)*utils.binom(60 - self.landsInLibrary, i - j)/utils.binom(60, i)
-        self.mulliganProb[6 - i][j] = prob
-
-        return prob
-
-    def getMulliganValue(self, hand):
-
-        lands = 0
-
-        for card in hand:
-            if card.ctype is 'Land':
-                lands += 1
-
-        return self.mulliganValue[7 - len(hand)][lands]
 
     def mulligan(self):
 
@@ -422,15 +366,62 @@ class MulliganAgent(Player):
 
         return False
 
-    def scry(self):
-        card = self.library.pop()
-        bottom = random.choice([True, False])
-        if bottom:
-            self.library.insert(0, card)
-            print("\nAgent " + self.name + " puts the top card of its library at the bottom.")
-        else:
-            self.library.append(card)
-            print("\nAgent " + self.name + " keeps the top card of its library.")
+    def getHandReward(self, hand):
+
+        lands = 0
+
+        for card in hand:
+            if card.ctype is 'Land':
+                lands += 1
+
+        return self.getKeepReward(len(hand), lands)
+
+    def getKeepReward(self, i, j):
+
+        alpha = 3.5
+
+        if self.keepRewards[7 - i][j] is not None:
+            return self.keepRewards[7 - i][j]
+
+        reward = self.landRewards[j] + alpha*i
+        self.keepRewards[7 - i][j] = reward
+
+        return reward
+
+    def mulliganValueIteration(self):
+
+        for i in range(7, -1, -1):
+            for j in range(i + 1):
+                self.mulliganValue[7 - i][j] = self.getKeepReward(i, j)
+
+        for epoch in range(1, 9):
+            for i in range(7, -1, -1):
+                for j in range(i + 1):
+                    mullValue = 0
+                    for jLine in range(i):
+                        mullValue += self.getMulliganProb(i - 1, jLine)*self.mulliganValue[7 - (i - 1)][jLine]
+                    if mullValue >= self.getKeepReward(i, j):
+                        self.mulliganValue[7 - i][j] = mullValue
+
+    def getMulliganProb(self, i, j):
+
+        if self.mulliganProb[6 - i][j] is not None:
+            return self.mulliganProb[6 - i][j]
+
+        prob = utils.binom(self.landsInLibrary, j)*utils.binom(60 - self.landsInLibrary, i - j)/utils.binom(60, i)
+        self.mulliganProb[6 - i][j] = prob
+
+        return prob
+
+    def getMulliganValue(self, hand):
+
+        lands = 0
+
+        for card in hand:
+            if card.ctype is 'Land':
+                lands += 1
+
+        return self.mulliganValue[7 - len(hand)][lands]
 
 class RandomAgent(MulliganAgent):
 
@@ -516,6 +507,16 @@ class RandomAgent(MulliganAgent):
         else:
             print("")
         return combatPairings
+
+    def scry(self):
+            card = self.library.pop()
+            bottom = random.choice([True, False])
+            if bottom:
+                self.library.insert(0, card)
+                print("\nAgent " + self.name + " puts the top card of its library at the bottom.")
+            else:
+                self.library.append(card)
+                print("\nAgent " + self.name + " keeps the top card of its library.")
 
     def discardExcess(self):
 

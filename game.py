@@ -201,8 +201,6 @@ class Game:
 
         return False
 
-
-
     ############### MAIN PHASE HANDLING ###############
     #
     # Main phase method. Lets players play cards.
