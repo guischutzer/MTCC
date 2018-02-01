@@ -567,31 +567,31 @@ class SearchAgent(RandomAgent):
             print("")
         return finalPairings
 
-    def chooseBlockOrder(self, combatPairings, game):
+    def chooseBlockOrder(self, combatPairingsIDs, game):
 
-        listOfPairings = utils.intraPermutations(combatPairings)
+        listOfPairings = utils.intraPermutations(combatPairingsIDs)
         maxReward = None
-        assignedPairingIDs = {}
-        for pairing in listOfPairings:
+        assignedPairingsIDs = {}
+        for pairingsIDs in listOfPairings:
             newGame = c.deepcopy(game)
-            newGame.combatPairings = {}
-            pairingIDs = {}
-            for attacker in pairing:
-                newAttacker = newGame.getPermanentFromID(attacker.ID)
-                newGame.combatPairings[newAttacker] = []
-                pairingIDs[attacker.ID] = []
-                for blocker in pairing[attacker]:
-                    newBlocker = newGame.getPermanentFromID(blocker.ID)
-                    pairingIDs[attacker.ID].append(blocker.ID)
-                    newGame.combatPairings[newAttacker].append(blocker)
-            newGame.resolveCombat(newGame.combatPairings)
+            newPairings = {}
+            newPairingsIDs = {}
+            for attID in pairingsIDs:
+                newAttacker = newGame.getPermanentFromID(attID)
+                newPairings[newAttacker] = []
+                newPairingsIDs[attID] = []
+                for blkID in pairingsIDs[attID]:
+                    newBlocker = newGame.getPermanentFromID(blkID)
+                    newPairingsIDs[attID].append(blkID)
+                    newPairings[newAttacker].append(newBlocker)
+            newGame.resolveCombat(newPairings)
             state = State(newGame, 'Combat', [])
             reward = state.getReward()
             if maxReward == None or reward >= maxReward:
                 maxReward = reward
-                assignedPairingIDs = pairingIDs
+                assignedPairingsIDs = newPairingsIDs
 
-        return assignedPairingIDs
+        return assignedPairingsIDs
 
     def assignBlockOrder(self, combatPairings, game):
 
@@ -699,32 +699,6 @@ class SearchAgent(RandomAgent):
             print(maxRewardPairingsIDs)
             print(maxReward)
         return maxRewardPairingsIDs
-
-    def chooseBlockOrder(self, combatPairingsIDs, game):
-
-        listOfPairings = utils.intraPermutations(combatPairingsIDs)
-        maxReward = None
-        assignedPairingsIDs = {}
-        for pairingsIDs in listOfPairings:
-            newGame = c.deepcopy(game)
-            newPairings = {}
-            newPairingsIDs = {}
-            for attID in pairingsIDs:
-                newAttacker = newGame.getPermanentFromID(attID)
-                newPairings[newAttacker] = []
-                newPairingsIDs[attID] = []
-                for blkID in pairingsIDs[attID]:
-                    newBlocker = newGame.getPermanentFromID(blkID)
-                    newPairingsIDs[attID].append(blkID)
-                    newPairings[newAttacker].append(newBlocker)
-            newGame.resolveCombat(newPairings)
-            state = State(newGame, 'Combat', [])
-            reward = state.getReward()
-            if maxReward == None or reward >= maxReward:
-                maxReward = reward
-                assignedPairingsIDs = newPairingsIDs
-
-        return assignedPairingsIDs
 
     def declareBlockers(self, legalActions, combatPairings, state):
 
