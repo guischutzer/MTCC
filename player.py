@@ -305,6 +305,14 @@ class MulliganAgent(Player):
                                [None, None, None],
                                [None, None],
                                [None]]
+        self.sumValue = [[None, None, None, None, None, None, None, None],
+                               [None, None, None, None, None, None, None],
+                               [None, None, None, None, None, None],
+                               [None, None, None, None, None],
+                               [None, None, None, None],
+                               [None, None, None],
+                               [None, None],
+                               [None]]
         self.keepRewards =  [[None, None, None, None, None, None, None, None],
                               [None, None, None, None, None, None, None],
                               [None, None, None, None, None, None],
@@ -335,7 +343,19 @@ class MulliganAgent(Player):
             self.mulliganValueIteration()
 
         if self.verbose:
-            print(self.mulliganValue)
+            if self.onThePlay:
+                print("On the play \n -----------")
+            else:
+                print("On the draw \n -----------")
+            print("Max value table")
+            for item in self.mulliganValue:
+                print(item)
+            print("Sum babababa")
+            for item in self.sumValue:
+                print(item)
+            print("Rewards")
+            for item in self.keepRewards:
+                print(item)
 
         n = len(self.hand)
         if n == 0:
@@ -393,14 +413,15 @@ class MulliganAgent(Player):
             for j in range(i + 1):
                 self.mulliganValue[7 - i][j] = self.getKeepReward(i, j)
 
-        for epoch in range(0, 9):
-            for i in range(7, -1, -1):
-                for j in range(i + 1):
-                    mullValue = 0
-                    for jLine in range(i):
-                        mullValue += self.getMulliganProb(i - 1, jLine)*self.mulliganValue[7 - (i - 1)][jLine]
-                    if mullValue >= self.getKeepReward(i, j):
-                        self.mulliganValue[7 - i][j] = mullValue
+        for i in range(1, 8):
+            mullSum = 0
+            for jLine in range(i):
+                mullSum += self.getMulliganProb(i - 1, jLine)*self.mulliganValue[7 - (i - 1)][jLine]
+            self.sumValue[i] = mullSum
+            for j in range(i + 1):
+                if mullSum >= self.getKeepReward(i, j):
+                    self.mulliganValue[7 - i][j] = mullSum
+
 
     def getMulliganProb(self, i, j):
 
