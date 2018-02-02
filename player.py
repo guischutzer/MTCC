@@ -347,14 +347,7 @@ class MulliganAgent(Player):
                 print("On the play \n -----------")
             else:
                 print("On the draw \n -----------")
-            print("Max value table")
             for item in self.mulliganValue:
-                print(item)
-            print("Sum babababa")
-            for item in self.sumValue:
-                print(item)
-            print("Rewards")
-            for item in self.keepRewards:
                 print(item)
 
         n = len(self.hand)
@@ -593,21 +586,6 @@ class SearchAgent(RandomAgent):
 
         return assignedPairingsIDs
 
-    def assignBlockOrder(self, combatPairings, game):
-
-        combatPairings = self.chooseBlockOrder(combatPairings, game)
-
-        combatPairings = game.combatPairingsFromIDs(combatPairings)
-        for attacker in combatPairings:
-            if len(combatPairings[attacker]) > 1:
-                print("Player " + self.name + " blocks " + attacker.stats())
-                i = 1
-                for blocker in combatPairings[attacker]:
-                    print(" - " + utils.getOrdinal(i) + " with " + blocker.stats())
-                    i += 1
-
-        return combatPairings
-
     def getChildren(self, state):
 
         if state.phase == 'Combat':
@@ -702,7 +680,7 @@ class SearchAgent(RandomAgent):
 
     def declareBlockers(self, legalActions, combatPairings, state):
 
-        pairingsIDs = self.chooseBlockers(legalActions, combatPairings, state, True)
+        pairingsIDs = self.chooseBlockers(legalActions, combatPairings, state, False)
 
         noBlocks = True
         print("Player " + self.name + " has declared ", end='')
@@ -789,8 +767,7 @@ class State:
                 elif self.phase == 'Second Main':
                     nextPhase = 'End'
                 children.append(State(game, nextPhase, self.actionPath + [action]))
-        else:
-            children = self.combatMaxMin()
+
         return children
 
     def combatMaxMin(self):
