@@ -170,11 +170,9 @@ class DayofJudgment(Card):
     def effect(self, game, targets):
 
         for creature in self.owner.creatures:
-            print(creature.stats())
             creature.destroy()
 
         for creature in game.opponent.creatures:
-            print(creature.stats())
             creature.destroy()
 
 class GriffinSentinel(Card):

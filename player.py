@@ -438,6 +438,34 @@ class MulliganAgent(Player):
 
         return self.mulliganValue[7 - len(hand)][lands]
 
+    def scry(self):
+        topValue = 0
+        bottomValue = 0
+        card = self.library.pop()
+        if card.ctype == 'Land':
+            topValue = self.mulliganValue[7 - (len(self.hand) + 1)][lands + 1]
+            bottomValue = self.mulliganValue[7 - (len(self.hand) + 1)][lands]
+        else:
+            topValue = self.mulliganValue[7 - (len(self.hand) + 1)][lands]
+            bottomValue = self.mulliganValue[7 - (len(self.hand) + 1)][lands + 1]
+        if topValue < bottomValue:
+            self.library.insert(0, card)
+            print("\nAgent " + self.name + " puts the top card of its library at the bottom.")
+        else:
+            self.library.append(card)
+            print("\nAgent " + self.name + " keeps the top card of its library.")
+
+    def printAttackers(self, attackers):
+        if attackers == []:
+            print("Player " + self.name + " has declared no attacking creatures.")
+            return attackers
+
+        print("Player " + self.name + " has declared:")
+        for creature in attackers:
+            print(" - " + creature.stats())
+        print("as attacker(s).")
+        return
+
 class RandomAgent(MulliganAgent):
 
     def mainPhaseAction(self, legalActions):
@@ -472,17 +500,6 @@ class RandomAgent(MulliganAgent):
         attackers = legalActions[index]
 
         return attackers
-
-    def printAttackers(self, attackers):
-        if attackers == []:
-            print("Player " + self.name + " has declared no attacking creatures.")
-            return attackers
-
-        print("Player " + self.name + " has declared:")
-        for creature in attackers:
-            print(" - " + creature.stats())
-        print("as attacker(s).")
-        return
 
     def assignBlockOrder(self, combatPairings, game):
 
@@ -539,7 +556,7 @@ class RandomAgent(MulliganAgent):
             index = random.randrange(0, self.cardsInHand())
             self.discard(self.hand[index])
 
-class SearchAgent(RandomAgent):
+class SearchAgent(MulliganAgent):
 
     def declareBlockers(self, legalActions, combatPairings, state):
 

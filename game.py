@@ -124,10 +124,6 @@ class Game:
         print("Precombat Main Phase")
         print("----------------------------------------------------------")
 
-        for card in activePlayer.hand:
-            print (card.name)
-        print("")
-
         # Main Phase method
         if self.mainPhase(1):
             return True
