@@ -165,7 +165,7 @@ class Game:
         ## Choosing Block Order - Active Player
         combatPairings = activePlayer.assignBlockOrder(combatPairings, self)
 
-        if self.resolveCombat(combatPairings):
+        if self.resolveCombat(combatPairings, True):
             return True
 
         ## Postcombat Main Phase
@@ -501,7 +501,7 @@ class Game:
     # Each attacker deals damage to its' blockers and vice-versa;
     # Each unblocked attacker deals damage to defending player;
     # checkSBA() called (returns True if game has ended)
-    def resolveCombat(self, combatPairings):
+    def resolveCombat(self, combatPairings, printing):
         activePlayer = self.activePlayer
         opponent = self.opponent
         # - First & Double Strike Damage
@@ -518,25 +518,25 @@ class Game:
                     if remainingDamage > 0:
                         if remainingDamage >= neededDamage:
                             if len(combatPairings[attacker][i:]) > 1:
-                                attacker.dealDamage(blocker, neededDamage)
+                                attacker.dealDamage(blocker, neededDamage, printing)
                                 remainingDamage -= neededDamage
                             else:
-                                attacker.dealDamage(blocker, remainingDamage)
+                                attacker.dealDamage(blocker, remainingDamage, printing)
                                 remainingDamage = 0
                         else:
-                            attacker.dealDamage(blocker, remainingDamage)
+                            attacker.dealDamage(blocker, remainingDamage, printing)
                             remainingDamage = 0
 
                 if combatPairings[attacker] == []:
-                    attacker.dealDamage(opponent, remainingDamage)
+                    attacker.dealDamage(opponent, remainingDamage, printing)
 
                 elif attacker.hasTrample():
                     if remainingDamage > 0:
-                        attacker.dealDamage(opponent, remainingDamage)
+                        attacker.dealDamage(opponent, remainingDamage, printing)
 
             for blocker in combatPairings[attacker]:
                 if blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                    blocker.dealDamage(attacker, blocker.curPower)
+                    blocker.dealDamage(attacker, blocker.curPower, printing)
 
         if self.checkSBA():
             return True
@@ -556,25 +556,25 @@ class Game:
                         if remainingDamage > 0:
                             if remainingDamage >= neededDamage:
                                 if len(combatPairings[attacker][i:]) > 1:
-                                    attacker.dealDamage(blocker, neededDamage)
+                                    attacker.dealDamage(blocker, neededDamage, printing)
                                     remainingDamage -= neededDamage
                                 else:
-                                    attacker.dealDamage(blocker, remainingDamage)
+                                    attacker.dealDamage(blocker, remainingDamage, printing)
                                     remainingDamage = 0
                             else:
-                                attacker.dealDamage(blocker, remainingDamage)
+                                attacker.dealDamage(blocker, remainingDamage, printing)
                                 remainingDamage = 0
 
                     if combatPairings[attacker] == []:
-                        attacker.dealDamage(opponent, remainingDamage)
+                        attacker.dealDamage(opponent, remainingDamage, printing)
 
                     elif attacker.hasTrample():
                         if remainingDamage > 0:
-                            attacker.dealDamage(opponent, remainingDamage)
+                            attacker.dealDamage(opponent, remainingDamage, printing)
             for blocker in combatPairings[attacker]:
                 if not blocker.destroyed:
                     if not blocker.hasFirstStrike() or blocker.hasDoubleStrike():
-                        blocker.dealDamage(attacker, blocker.curPower)
+                        blocker.dealDamage(attacker, blocker.curPower, printing)
 
         if self.checkSBA():
             return True

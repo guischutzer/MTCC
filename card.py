@@ -228,8 +228,8 @@ class SkyrakerGiant(Card):
         self.abilities = ["Reach"]
         self.targets = []
         self.owner = owner
-        self.power = 3
-        self.tou = 4
+        self.power = 4
+        self.tou = 3
 
 class FencingAce(Card):
     def __init__(self, owner):

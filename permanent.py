@@ -96,8 +96,13 @@ class Creature(Permanent):
             self.sick = True
 
 
-    def dealDamage(self, target, amount):
+    def dealDamage(self, target, amount, printing):
         target.takeDamage(amount)
+        if printing:
+            if isinstance(target, Creature):
+                print(self.card.name + " deals " + str(amount) + " damage to " + target.card.name)
+            else:
+                print(self.card.name + " deals " + str(amount) + " damage to player " + target.name)
         if self.hasLifelink():
             self.controller.gainLife(amount)
         if self.hasDeathtouch() and inspect.isinstance(target, Creature):

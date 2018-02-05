@@ -441,13 +441,17 @@ class MulliganAgent(Player):
     def scry(self):
         topValue = 0
         bottomValue = 0
+        landNumber = 0
+        for card in self.hand:
+            if card.ctype is 'Land':
+                landNumber += 1
         card = self.library.pop()
         if card.ctype == 'Land':
-            topValue = self.mulliganValue[7 - (len(self.hand) + 1)][lands + 1]
-            bottomValue = self.mulliganValue[7 - (len(self.hand) + 1)][lands]
+            topValue = self.mulliganValue[7 - (len(self.hand) + 1)][landNumber + 1]
+            bottomValue = self.mulliganValue[7 - (len(self.hand) + 1)][landNumber]
         else:
-            topValue = self.mulliganValue[7 - (len(self.hand) + 1)][lands]
-            bottomValue = self.mulliganValue[7 - (len(self.hand) + 1)][lands + 1]
+            topValue = self.mulliganValue[7 - (len(self.hand) + 1)][landNumber]
+            bottomValue = self.mulliganValue[7 - (len(self.hand) + 1)][landNumber + 1]
         if topValue < bottomValue:
             self.library.insert(0, card)
             print("\nAgent " + self.name + " puts the top card of its library at the bottom.")
@@ -594,7 +598,7 @@ class SearchAgent(MulliganAgent):
                     newBlocker = newGame.getPermanentFromID(blkID)
                     newPairingsIDs[attID].append(blkID)
                     newPairings[newAttacker].append(newBlocker)
-            newGame.resolveCombat(newPairings)
+            newGame.resolveCombat(newPairings, False)
             state = State(newGame, 'Combat', [])
             reward = state.getReward()
             if maxReward == None or reward >= maxReward:
@@ -625,7 +629,7 @@ class SearchAgent(MulliganAgent):
             legalBlocks = newGame.getBlockingActions(newAttackers)
             combatPairingsIDs = self.chooseBlockers(legalBlocks, combatPairings, state, False)
             combatPairings = newGame.getCombatPairingsFromIDs(combatPairingsIDs)
-            newGame.resolveCombat(combatPairings)
+            newGame.resolveCombat(combatPairings, False)
             children.append(State(newGame, 'Second Main', state.actionPath + [attIDs]))
         return children
 
@@ -679,7 +683,7 @@ class SearchAgent(MulliganAgent):
                 print("+++++++PREBLOCK+++++++")
                 print(pairingsIDs)
                 newGame.printGameState()
-            newGame.resolveCombat(newPairings)
+            newGame.resolveCombat(newPairings, False)
             newState = State(newGame, 'Combat', [])
             reward = -newState.getReward()
             if printing:
@@ -734,6 +738,35 @@ class SearchAgent(MulliganAgent):
                     i += 1
 
         return combatPairings
+
+    def printMainAction(self, card, targets):
+        if card == 'Pass':
+            return
+        print("Player " + self.name + " plays " + card.name, end='')
+        if len(targets) > 0:
+            print(" targeting ", end='')
+            for i in range(len(targets)):
+                if not isinstance(targets[i], Player):
+                    print(targets[i].card.name, end='')
+                else:
+                    print(targets[i].name, end='')
+                if len(targets[i+1:]) == 1:
+                    print(" and ", end='')
+                elif len(targets[i+1:]) > 1:
+                    print(", ", end='')
+        print(".")
+
+    def discardExcess(self):
+
+        while self.cardsInHand() > 7:
+            maxCost = 0
+            discardcard = None
+            for card in self.hand:
+                if card.cmc() >= maxCost:
+                    discardcard = card
+                    maxCost = card.cmc()
+
+            self.discard(discardcard)
 
 class State:
 
@@ -799,7 +832,7 @@ class State:
             legalBlocks = newGame.getBlockingActions(attackers)
             combatPairingsIDs = newGame.activePlayer.chooseBlockers(legalBlocks, combatPairings, self)
             combatPairings = newGame.getCombatPairingsFromIDs(combatPairingsIDs)
-            newGame.resolveCombat(combatPairings)
+            newGame.resolveCombat(combatPairings, False)
             attIDs = []
             for attacker in attackers:
                 attIDs.append(attacker.ID)
